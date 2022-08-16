@@ -1,0 +1,7 @@
+version: v1
+managed:
+  enabled: true
+plugins:
+  - name: protoc-gen-wire-kotlin-remote
+    out: gen/proto/kotlinout
+    path: ./protoc-gen-wire-kotlin
