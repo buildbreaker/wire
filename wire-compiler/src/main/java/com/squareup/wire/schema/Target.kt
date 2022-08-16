@@ -113,7 +113,7 @@ data class JavaTarget(
     return object : SchemaHandler() {
       private lateinit var javaGenerator: JavaGenerator
 
-      override fun handle(schema: Schema, context: Context) {
+      override fun handle(schema: Schema, context: SchemaContext) {
         val profileName = if (android) "android" else "java"
         val profile = context.profileLoader!!.loadProfile(profileName, schema)
         javaGenerator = JavaGenerator.get(schema)
@@ -124,12 +124,12 @@ data class JavaTarget(
           .withOptions(emitDeclaredOptions, emitAppliedOptions)
           .withBuildersOnly(buildersOnly)
 
-        context.fileSystem.createDirectories(context.outDirectory)
+        context.createDirectories(context.outDirectory)
 
         super.handle(schema, context)
       }
 
-      override fun handle(type: Type, context: Context): Path? {
+      override fun handle(type: Type, context: SchemaContext): Path? {
         if (JavaGenerator.builtInType(type.type)) return null
 
         val typeSpec = javaGenerator.generateType(type)
@@ -137,12 +137,12 @@ data class JavaTarget(
         return write(javaTypeName, typeSpec, type.type, type.location, context)
       }
 
-      override fun handle(service: Service, context: Context): List<Path> {
+      override fun handle(service: Service, context: SchemaContext): List<Path> {
         // Service handling isn't supporting in Java.
         return emptyList()
       }
 
-      override fun handle(extend: Extend, field: Field, context: Context): Path? {
+      override fun handle(extend: Extend, field: Field, context: SchemaContext): Path? {
         val typeSpec = javaGenerator.generateOptionType(extend, field) ?: return null
         val javaTypeName = javaGenerator.generatedTypeName(extend.member(field))
         return write(javaTypeName, typeSpec, field.qualifiedName, field.location, context)
@@ -153,7 +153,7 @@ data class JavaTarget(
         typeSpec: com.squareup.javapoet.TypeSpec,
         source: Any,
         location: Location,
-        context: Context,
+        context: SchemaContext,
       ): Path {
         val outDirectory = context.outDirectory
         val javaFile = JavaFile.builder(javaTypeName.packageName(), typeSpec)
@@ -168,10 +168,8 @@ data class JavaTarget(
           outDirectory, "${javaFile.packageName}.${javaFile.typeSpec.name}", "Java"
         )
         try {
-          context.fileSystem.createDirectories(filePath.parent!!)
-          context.fileSystem.write(filePath) {
-            writeUtf8(javaFile.toString())
-          }
+          context.createDirectories(filePath.parent!!)
+          context.write(filePath, javaFile.toString())
         } catch (e: IOException) {
           throw IOException(
             "Error emitting ${javaFile.packageName}.${javaFile.typeSpec.name} to $outDirectory", e
@@ -253,7 +251,7 @@ data class KotlinTarget(
     return object : SchemaHandler() {
       private lateinit var kotlinGenerator: KotlinGenerator
 
-      override fun handle(schema: Schema, context: Context) {
+      override fun handle(schema: Schema, context: SchemaContext) {
         val profileName = if (android) "android" else "java"
         val profile = context.profileLoader!!.loadProfile(profileName, schema)
         kotlinGenerator = KotlinGenerator(
@@ -271,11 +269,11 @@ data class KotlinTarget(
           buildersOnly = buildersOnly,
           singleMethodServices = singleMethodServices,
         )
-        context.fileSystem.createDirectories(context.outDirectory)
+        context.createDirectories(context.outDirectory)
         super.handle(schema, context)
       }
 
-      override fun handle(type: Type, context: Context): Path? {
+      override fun handle(type: Type, context: SchemaContext): Path? {
         if (KotlinGenerator.builtInType(type.type)) return null
 
         val typeSpec = kotlinGenerator.generateType(type)
@@ -283,7 +281,7 @@ data class KotlinTarget(
         return write(className, typeSpec, type.type, type.location, context)
       }
 
-      override fun handle(service: Service, context: Context): List<Path> {
+      override fun handle(service: Service, context: SchemaContext): List<Path> {
         if (rpcRole === RpcRole.NONE) return emptyList()
 
         val generatedPaths = mutableListOf<Path>()
@@ -314,7 +312,7 @@ data class KotlinTarget(
         return generatedPaths
       }
 
-      override fun handle(extend: Extend, field: Field, context: Context): Path? {
+      override fun handle(extend: Extend, field: Field, context: SchemaContext): Path? {
         val typeSpec = kotlinGenerator.generateOptionType(extend, field) ?: return null
         val name = kotlinGenerator.generatedTypeName(extend.member(field))
         return write(name, typeSpec, field.qualifiedName, field.location, context)
@@ -325,7 +323,7 @@ data class KotlinTarget(
         typeSpec: TypeSpec,
         source: Any,
         location: Location,
-        context: Context,
+        context: SchemaContext,
       ): Path {
         val modulePath = context.outDirectory
         val kotlinFile = FileSpec.builder(name.packageName, name.simpleName)
@@ -336,16 +334,13 @@ data class KotlinTarget(
         val filePath = modulePath /
           kotlinFile.packageName.replace(".", "/") /
           "${kotlinFile.name}.kt"
-
         context.logger.artifactHandled(
           modulePath, "${kotlinFile.packageName}.${(kotlinFile.members.first() as TypeSpec).name}",
           "Kotlin"
         )
         try {
-          context.fileSystem.createDirectories(filePath.parent!!)
-          context.fileSystem.write(filePath) {
-            writeUtf8(kotlinFile.toString())
-          }
+          context.createDirectories(filePath.parent!!)
+          context.write(filePath, kotlinFile.toString())
         } catch (e: IOException) {
           throw IOException("Error emitting ${kotlinFile.packageName}.$source to $outDirectory", e)
         }
@@ -380,13 +375,13 @@ data class SwiftTarget(
     return object : SchemaHandler() {
       private lateinit var generator: SwiftGenerator
 
-      override fun handle(schema: Schema, context: Context) {
+      override fun handle(schema: Schema, context: SchemaContext) {
         generator = SwiftGenerator(schema, context.module?.upstreamTypes ?: mapOf())
-        context.fileSystem.createDirectories(context.outDirectory)
+        context.createDirectories(context.outDirectory)
         super.handle(schema, context)
       }
 
-      override fun handle(type: Type, context: Context): Path? {
+      override fun handle(type: Type, context: SchemaContext): Path? {
         if (SwiftGenerator.builtInType(type.type)) return null
 
         val modulePath = context.outDirectory
@@ -402,9 +397,7 @@ data class SwiftTarget(
 
         val filePath = modulePath / "${swiftFile.name}.swift"
         try {
-          context.fileSystem.write(filePath) {
-            writeUtf8(swiftFile.toString())
-          }
+          context.write(filePath, swiftFile.toString())
         } catch (e: IOException) {
           throw IOException(
             "Error emitting ${swiftFile.moduleName}.${typeName.canonicalName} to $modulePath", e
@@ -417,11 +410,11 @@ data class SwiftTarget(
         return filePath
       }
 
-      override fun handle(service: Service, context: Context) = emptyList<Path>()
+      override fun handle(service: Service, context: SchemaContext) = emptyList<Path>()
       override fun handle(
         extend: Extend,
         field: Field,
-        context: Context
+        context: SchemaContext
       ): Path? = null
     }
   }
@@ -450,8 +443,8 @@ data class ProtoTarget(
 
   override fun newHandler(): SchemaHandler {
     return object : SchemaHandler() {
-      override fun handle(schema: Schema, context: Context) {
-        context.fileSystem.createDirectories(context.outDirectory)
+      override fun handle(schema: Schema, context: SchemaContext) {
+        context.createDirectories(context.outDirectory)
         val outDirectory = context.outDirectory
 
         for (protoFile in schema.protoFiles) {
@@ -464,10 +457,8 @@ data class ProtoTarget(
           context.logger.artifactHandled(outputDirectory, protoFile.location.path, "Proto")
 
           try {
-            context.fileSystem.createDirectories(outputFilePath.parent!!)
-            context.fileSystem.write(outputFilePath) {
-              writeUtf8(protoFile.toSchema())
-            }
+            context.createDirectories(outputFilePath.parent!!)
+            context.write(outputFilePath, protoFile.toSchema())
           } catch (e: IOException) {
             throw IOException("Error emitting $outputFilePath to $outDirectory", e)
           }
@@ -476,11 +467,11 @@ data class ProtoTarget(
 
       private fun ProtoFile.isEmpty() = types.isEmpty() && services.isEmpty() && extendList.isEmpty()
 
-      override fun handle(type: Type, context: Context): Path? = null
+      override fun handle(type: Type, context: SchemaContext): Path? = null
 
-      override fun handle(service: Service, context: Context): List<Path> = listOf()
+      override fun handle(service: Service, context: SchemaContext): List<Path> = listOf()
 
-      override fun handle(extend: Extend, field: Field, context: Context): Path? = null
+      override fun handle(extend: Extend, field: Field, context: SchemaContext): Path? = null
     }
   }
 

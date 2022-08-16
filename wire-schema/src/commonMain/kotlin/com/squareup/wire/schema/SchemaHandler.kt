@@ -19,6 +19,7 @@ import com.squareup.wire.WireLogger
 import com.squareup.wire.internal.Serializable
 import okio.FileSystem
 import okio.Path
+import okio.internal.commonAsUtf8ToByteArray
 
 /** A [SchemaHandler] [handle]s [Schema]! */
 abstract class SchemaHandler {
@@ -28,7 +29,7 @@ abstract class SchemaHandler {
    * [context] rules. Override this method if you have specific needs the default implementation
    * doesn't address.
    */
-  open fun handle(schema: Schema, context: Context) {
+  open fun handle(schema: Schema, context: SchemaContext) {
     val moduleTypes = context.module?.types
     for (protoFile in schema.protoFiles) {
       if (!context.inSourcePath(protoFile)) continue
@@ -47,74 +48,84 @@ abstract class SchemaHandler {
    * Returns the [Path] of the file which [type] will have been generated into. Null if nothing has
    * been generated.
    */
-  abstract fun handle(type: Type, context: Context): Path?
+  abstract fun handle(type: Type, context: SchemaContext): Path?
 
   /**
    * Returns the [Path]s of the files which [service] will have been generated into. Null if
    * nothing has been generated.
    */
-  abstract fun handle(service: Service, context: Context): List<Path>
+  abstract fun handle(service: Service, context: SchemaContext): List<Path>
 
   /**
    * Returns the [Path] of the files which [field] will have been generated into. Null if nothing
    * has been generated.
    */
-  abstract fun handle(extend: Extend, field: Field, context: Context): Path?
+  abstract fun handle(extend: Extend, field: Field, context: SchemaContext): Path?
 
   /**
-   * A [Context] holds the information necessary for a [SchemaHandler] to do its job. It contains
+   * A [FileSystemContext] holds the information necessary for a [SchemaHandler] to do its job. It contains
    * both helping objects such as [logger], and constraining objects such as [emittingRules].
    */
-  data class Context(
+  data class FileSystemContext(
     /** To be used by the [SchemaHandler] for reading/writing operations on disk. */
     val fileSystem: FileSystem,
     /** Location on [fileSystem] where the [SchemaHandler] is to write files, if it needs to. */
-    val outDirectory: Path,
+    override val outDirectory: Path,
     /** Event-listener like logger with which [SchemaHandler] can notify handled artifacts. */
-    val logger: WireLogger,
+    override val logger: WireLogger,
     /**
      * Object to be used by the [SchemaHandler] to store errors. After all [SchemaHandler]s are
      * finished, Wire will throw an exception if any error are present inside the collector.
      */
-    val errorCollector: ErrorCollector = ErrorCollector(),
+    override  val errorCollector: ErrorCollector = ErrorCollector(),
     /**
      * Set of rules letting the [SchemaHandler] know what [ProtoType] to include or exclude in its
      * logic. This object represents the `includes` and `excludes` values which were associated
      * with its [Target].
      */
-    val emittingRules: EmittingRules = EmittingRules(),
+    override  val emittingRules: EmittingRules = EmittingRules(),
     /**
      * If set, the [SchemaHandler] is to handle only types which are not claimed yet, and claim
      * itself types it has handled. If null, the [SchemaHandler] is to handle all types.
      */
-    val claimedDefinitions: ClaimedDefinitions? = null,
+    override val claimedDefinitions: ClaimedDefinitions? = null,
     /** If the [SchemaHandler] writes files, it is to claim [Path]s of files it created. */
-    val claimedPaths: ClaimedPaths = ClaimedPaths(),
+    override  val claimedPaths: ClaimedPaths = ClaimedPaths(),
     /**
      * A [Module] dictates how the loaded types are partitioned and how they are to be handled.
      * If null, there are no partition and all types are to be handled.
      */
-    val module: Module? = null,
+    override  val module: Module? = null,
     /**
      * Contains [Location.path] values of all `sourcePath` roots. The [SchemaHandler] is to ignore
      * [ProtoFile]s not part of this set; this verification can be executed via the [inSourcePath]
      * method.
      */
-    val sourcePathPaths: Set<String>? = null,
+    override  val sourcePathPaths: Set<String>? = null,
     /**
      * To be used by the [SchemaHandler] if it supports [Profile] files. Please note that this API
      * is unstable and can change at anytime.
      */
-    val profileLoader: ProfileLoader? = null,
-  ) {
+    override  val profileLoader: ProfileLoader? = null,
+  ): SchemaContext {
     /** True if this [protoFile] ia part of a `sourcePath` root. */
-    fun inSourcePath(protoFile: ProtoFile): Boolean {
+    override fun inSourcePath(protoFile: ProtoFile): Boolean {
       return inSourcePath(protoFile.location)
     }
 
     /** True if this [location] ia part of a `sourcePath` root. */
-    fun inSourcePath(location: Location): Boolean {
+    override fun inSourcePath(location: Location): Boolean {
       return sourcePathPaths == null || location.path in sourcePathPaths
+    }
+
+    override fun createDirectories(dir: Path, mustCreate: Boolean) {
+      fileSystem.createDirectories(dir, mustCreate)
+    }
+
+    override fun write(file: Path, str: String) {
+      fileSystem.write(file, false) {
+        write(str.commonAsUtf8ToByteArray())
+      }
     }
   }
 
@@ -138,7 +149,7 @@ abstract class SchemaHandler {
    */
   private fun handle(
     protoFile: ProtoFile,
-    context: Context,
+    context: SchemaContext,
   ) {
     val claimedDefinitions = context.claimedDefinitions
     val emittingRules = context.emittingRules
