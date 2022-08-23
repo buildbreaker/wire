@@ -10,7 +10,7 @@ val stubbedRequestFile = "$devPath/wire/wire-library/request.binary"
 
 class StubbedRequestDebugging {
   companion object {
-    fun debug(request: PluginProtos.CodeGeneratorRequest, context: CodeGenerator.Context) {
+    fun debug(request: PluginProtos.CodeGeneratorRequest) {
       val directory = File(devPath)
       if (!directory.exists()) {
         throw RuntimeException("change the devPath in this file.")
