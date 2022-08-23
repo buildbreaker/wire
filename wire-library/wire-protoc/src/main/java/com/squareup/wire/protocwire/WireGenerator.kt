@@ -2,7 +2,6 @@ package com.squareup.wire.protocwire
 
 import com.google.protobuf.AbstractMessage
 import com.google.protobuf.DescriptorProtos
-import com.google.protobuf.Descriptors
 import com.google.protobuf.Descriptors.EnumValueDescriptor
 import com.google.protobuf.DynamicMessage
 import com.google.protobuf.GeneratedMessageV3.ExtendableMessage
@@ -23,7 +22,11 @@ import com.squareup.wire.schema.Location
 import com.squareup.wire.schema.ProfileLoader
 import com.squareup.wire.schema.ProtoFile
 import com.squareup.wire.schema.SchemaHandler
-import com.squareup.wire.schema.internal.parser.*
+import com.squareup.wire.schema.internal.parser.FieldElement
+import com.squareup.wire.schema.internal.parser.MessageElement
+import com.squareup.wire.schema.internal.parser.OptionElement
+import com.squareup.wire.schema.internal.parser.ProtoFileElement
+import com.squareup.wire.schema.internal.parser.TypeElement
 import okio.Buffer
 import okio.BufferedSink
 import okio.FileSystem

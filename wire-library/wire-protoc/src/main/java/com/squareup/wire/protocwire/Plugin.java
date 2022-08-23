@@ -13,7 +13,10 @@ import com.google.protobuf.compiler.PluginProtos.CodeGeneratorResponse;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.util.*;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 /**
  * Front-end for protoc code generator plugins written in Java.
@@ -242,8 +245,7 @@ public final class Plugin {
    */
   private static Map<String, FileDescriptor> asDescriptors(List<FileDescriptorProto> protoFiles)
     throws PluginException {
-    Map<String, FileDescriptor> filesByName =
-      new HashMap<String, FileDescriptor>(protoFiles.size());
+    Map<String, FileDescriptor> filesByName = new HashMap<>(protoFiles.size());
     for (FileDescriptorProto protoFile : protoFiles) {
       FileDescriptor[] dependencies =
         new FileDescriptor[protoFile.getDependencyCount()];
