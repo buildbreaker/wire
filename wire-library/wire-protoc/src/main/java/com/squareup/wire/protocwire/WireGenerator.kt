@@ -252,19 +252,23 @@ private fun toCharArray(bytes: ByteArray): CharArray {
   return ch
 }
 
+private fun simpleValue(optVal: OptionValueAndKind): Any {
+  return if (optVal.kind == OptionElement.Kind.BOOLEAN ||
+      optVal.kind == OptionElement.Kind.ENUM ||
+      optVal.kind == OptionElement.Kind.NUMBER) {
+    OptionElement.OptionPrimitive(optVal.kind, optVal.value)
+  } else {
+    optVal.value
+  }
+}
+
 private fun valueOfList(list: List<*>): List<Any> {
   val ret = mutableListOf<Any>()
   for (element in list) {
     if (element == null) {
       throw NullPointerException("list value should not contain null")
     }
-    val (value, kind) = valueOf(element)
-    val elemValue = if (kind == OptionElement.Kind.BOOLEAN || kind == OptionElement.Kind.ENUM || kind == OptionElement.Kind.NUMBER) {
-      OptionElement.OptionPrimitive(kind, value)
-    } else {
-      value
-    }
-    ret.add(elemValue)
+    ret.add(simpleValue(valueOf(element)))
   }
   return ret
 }
@@ -274,13 +278,7 @@ private fun valueOfMessage(msg: AbstractMessage): Map<String, Any> {
   for (entry in msg.allFields.entries) {
     val fld = entry.key
     val name = if (fld.isExtension) "[${fld.fullName}]" else fld.name
-    val (value, kind) = valueOf(entry.value)
-    val fldValue = if (kind == OptionElement.Kind.BOOLEAN || kind == OptionElement.Kind.ENUM || kind == OptionElement.Kind.NUMBER) {
-      OptionElement.OptionPrimitive(kind, value)
-    } else {
-      value
-    }
-    ret[name] = fldValue
+    ret[name] = simpleValue(valueOf(entry.value))
   }
   return ret
 }
