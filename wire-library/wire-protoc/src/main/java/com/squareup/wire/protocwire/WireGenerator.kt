@@ -2,6 +2,7 @@ package com.squareup.wire.protocwire
 
 import com.google.protobuf.AbstractMessage
 import com.google.protobuf.DescriptorProtos
+import com.google.protobuf.DescriptorProtos.EnumDescriptorProto
 import com.google.protobuf.Descriptors.EnumValueDescriptor
 import com.google.protobuf.DynamicMessage
 import com.google.protobuf.GeneratedMessageV3.ExtendableMessage
@@ -118,30 +119,26 @@ class WireGenerator(
 }
 
 private fun parseFileDescriptor(fileDescriptor: DescriptorProtos.FileDescriptorProto, descs: DescriptorSource): ProtoFileElement {
-  val location = Location.get(fileDescriptor.name)
   val helper = SourceCodeHelper(fileDescriptor)
 
   val imports = mutableListOf<String>()
   val publicImports = mutableListOf<String>()
   val types = mutableListOf<TypeElement>()
 
-  val path = mutableListOf<Int>()
-  path.add(DescriptorProtos.FileDescriptorProto.MESSAGE_TYPE_FIELD_NUMBER)
-  path.add(0) // placeholder for index
+  val messagePath = mutableListOf(DescriptorProtos.FileDescriptorProto.MESSAGE_TYPE_FIELD_NUMBER, 0)
   for ((index, messageType) in fileDescriptor.messageTypeList.withIndex()) {
-    path[1] = index
-    types.add(parseMessage(path, helper, messageType, descs))
+    messagePath[1] = index
+    types.add(parseMessage(messagePath, helper, messageType, descs))
   }
 
-  path.clear()
-  path.add(DescriptorProtos.FileDescriptorProto.ENUM_TYPE_FIELD_NUMBER)
-  path.add(0)
+  val enumPath = mutableListOf(DescriptorProtos.FileDescriptorProto.ENUM_TYPE_FIELD_NUMBER, 0)
   for ((index, enumType) in fileDescriptor.enumTypeList.withIndex()) {
-    path[1] = index
-    types.add(parseEnum(path, helper, enumType, descs))
+    enumPath[1] = index
+    types.add(parseEnum(messagePath, helper, enumType, descs))
   }
+
   return ProtoFileElement(
-    location = location,
+    location = Location.get(fileDescriptor.name),
     imports = imports,
     publicImports = publicImports,
     packageName = fileDescriptor.`package`,
@@ -152,12 +149,11 @@ private fun parseFileDescriptor(fileDescriptor: DescriptorProtos.FileDescriptorP
   )
 }
 
-private fun parseEnum(path: List<Int>, helper: SourceCodeHelper, enum: DescriptorProtos.EnumDescriptorProto, descs: DescriptorSource): EnumElement {
+private fun parseEnum(path: List<Int>, helper: SourceCodeHelper, enum: EnumDescriptorProto, descs: DescriptorSource): EnumElement {
   val info = helper.getLocation(path)
   val constants = mutableListOf<EnumConstantElement>()
   val enumPaths = mutableListOf(*path.toTypedArray())
-  enumPaths.add(DescriptorProtos.EnumDescriptorProto.VALUE_FIELD_NUMBER)
-  enumPaths.add(0)
+  enumPaths.addAll(listOf(EnumDescriptorProto.VALUE_FIELD_NUMBER, 0))
   for ((index, enumValueDescriptorProto) in enum.valueList.withIndex()) {
     enumPaths[enumPaths.size - 1] = index
     val enumValueInfo = helper.getLocation(enumPaths)
@@ -183,20 +179,18 @@ private fun parseMessage(path: List<Int>, helper: SourceCodeHelper, message: Des
   val info = helper.getLocation(path)
 
   val nestedTypes = mutableListOf<TypeElement>()
-  val nestedPath = mutableListOf<Int>().apply { addAll(path) }
-  nestedPath.add(DescriptorProtos.DescriptorProto.NESTED_TYPE_FIELD_NUMBER)
-  nestedPath.add(0) // placeholder for index
+  val nestedMessagePath = mutableListOf(*path.toTypedArray())
+  nestedMessagePath.addAll(listOf(DescriptorProtos.DescriptorProto.NESTED_TYPE_FIELD_NUMBER, 0))
   for ((index, nestedType) in message.nestedTypeList.withIndex()) {
-    nestedPath[nestedPath.size-1] = index
-    nestedTypes.add(parseMessage(nestedPath, helper, nestedType, descs))
+    nestedMessagePath[nestedMessagePath.size - 1] = index
+    nestedTypes.add(parseMessage(nestedMessagePath, helper, nestedType, descs))
   }
 
-  val nestedEnumsPath = mutableListOf<Int>().apply { addAll(path) }
-  nestedEnumsPath.add(DescriptorProtos.DescriptorProto.ENUM_TYPE_FIELD_NUMBER)
-  nestedEnumsPath.add(0) // placeholder for index
+  val nestedEnumPath = mutableListOf(*path.toTypedArray())
+  nestedEnumPath.addAll(listOf(DescriptorProtos.DescriptorProto.ENUM_TYPE_FIELD_NUMBER, 0))
   for ((index, nestedType) in message.enumTypeList.withIndex()) {
-    nestedEnumsPath[nestedEnumsPath.size - 1] = index
-    nestedTypes.add(parseEnum(nestedEnumsPath, helper, nestedType, descs))
+    nestedEnumPath[nestedEnumPath.size - 1] = index
+    nestedTypes.add(parseEnum(nestedEnumPath, helper, nestedType, descs))
   }
 
   return MessageElement(
@@ -215,11 +209,10 @@ private fun parseMessage(path: List<Int>, helper: SourceCodeHelper, message: Des
 
 private fun parseFields(path: List<Int>, helper: SourceCodeHelper, fieldList: List<DescriptorProtos.FieldDescriptorProto>, descs: DescriptorSource): List<FieldElement> {
   val result = mutableListOf<FieldElement>()
-  val fieldPath = mutableListOf<Int>().apply { addAll(path) }
-  fieldPath.add(DescriptorProtos.DescriptorProto.FIELD_FIELD_NUMBER)
-  fieldPath.add(0) // placeholder for index
+  val fieldPath = mutableListOf(*path.toTypedArray())
+  fieldPath.addAll(listOf(DescriptorProtos.DescriptorProto.FIELD_FIELD_NUMBER, 0))
   for ((index, field) in fieldList.withIndex()) {
-    fieldPath[fieldPath.size-1] = index
+    fieldPath[fieldPath.size - 1] = index
     val info = helper.getLocation(fieldPath)
     result.add(FieldElement(
       location = info.loc,
