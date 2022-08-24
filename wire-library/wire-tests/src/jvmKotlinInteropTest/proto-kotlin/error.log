@@ -1,81 +1,48 @@
-com.squareup.wire.schema.SchemaException: unable to resolve squareup.protos.kotlin.alltypes.AllTypes.NestedEnum
-  for field opt_nested_enum (all_types.proto:48:2)
-  in message squareup.protos.kotlin.alltypes.AllTypes (all_types.proto:20:0)
-unable to resolve squareup.protos.kotlin.alltypes.AllTypes.NestedEnum
-  for field req_nested_enum (all_types.proto:66:2)
-  in message squareup.protos.kotlin.alltypes.AllTypes (all_types.proto:20:0)
-unable to resolve squareup.protos.kotlin.alltypes.AllTypes.NestedEnum
-  for field rep_nested_enum (all_types.proto:84:2)
-  in message squareup.protos.kotlin.alltypes.AllTypes (all_types.proto:20:0)
-unable to resolve squareup.protos.kotlin.alltypes.AllTypes.NestedEnum
-  for field pack_nested_enum (all_types.proto:100:2)
-  in message squareup.protos.kotlin.alltypes.AllTypes (all_types.proto:20:0)
-unable to resolve squareup.protos.kotlin.alltypes.AllTypes.NestedEnum
-  for field default_nested_enum (all_types.proto:117:2)
-  in message squareup.protos.kotlin.alltypes.AllTypes (all_types.proto:20:0)
-unable to resolve squareup.protos.kotlin.alltypes.AllTypes.NestedEnum
-  for field value (all_types.proto)
-  in message squareup.protos.kotlin.alltypes.AllTypes.MapStringEnumEntry (all_types.proto)
-unable to resolve google.protobuf.FieldDescriptorProto.Label
-  for field label (google/protobuf/descriptor.proto:180:2)
-  in message google.protobuf.FieldDescriptorProto (google/protobuf/descriptor.proto:137:0)
-unable to resolve google.protobuf.FieldDescriptorProto.Type
-  for field type (google/protobuf/descriptor.proto:184:2)
-  in message google.protobuf.FieldDescriptorProto (google/protobuf/descriptor.proto:137:0)
-unable to resolve google.protobuf.FileOptions.OptimizeMode
-  for field optimize_for (google/protobuf/descriptor.proto:383:2)
-  in message google.protobuf.FileOptions (google/protobuf/descriptor.proto:340:0)
-unable to resolve google.protobuf.FieldOptions.CType
-  for field ctype (google/protobuf/descriptor.proto:538:2)
-  in message google.protobuf.FieldOptions (google/protobuf/descriptor.proto:533:0)
-unable to resolve google.protobuf.FieldOptions.JSType
-  for field jstype (google/protobuf/descriptor.proto:565:2)
-  in message google.protobuf.FieldOptions (google/protobuf/descriptor.proto:533:0)
-unable to resolve google.protobuf.MethodOptions.IdempotencyLevel
-  for field idempotency_level (google/protobuf/descriptor.proto:721:2)
-  in message google.protobuf.MethodOptions (google/protobuf/descriptor.proto:700:0)
-unable to resolve squareup.protos.custom_options.FooBar.FooBarBazEnum
-  for field value (custom_options.proto:46:4)
-  in message squareup.protos.custom_options.FooBar.Nested (custom_options.proto:45:2)
-unable to resolve squareup.protos.kotlin.OptionalEnumUser.OptionalEnum
-  for field optional_enum (optional_enum.proto:20:2)
-  in message squareup.protos.kotlin.OptionalEnumUser (optional_enum.proto:19:0)
-unable to resolve squareup.protos.kotlin.person.Person.PhoneType
-  for field type (person.proto:45:4)
-  in message squareup.protos.kotlin.person.Person.PhoneNumber (person.proto:41:2)
-unable to resolve ModelEvaluation.ModelsEntry
+com.squareup.wire.schema.SchemaException: unable to resolve .ModelEvaluation.ModelsEntry
   for field models (resursive_map.proto:18:2)
   in message .ModelEvaluation (resursive_map.proto:15:0)
-unable to resolve ModelEvaluation
+unable to resolve .ModelEvaluation
   for field value (resursive_map.proto)
   in message .ModelEvaluation.ModelsEntry (resursive_map.proto)
-unable to resolve squareup.protos.kotlin.MessageWithStatus.Status
-  for field a (same_name_enum.proto:33:2)
-  in message squareup.protos.kotlin.MessageUsingMultipleEnums (same_name_enum.proto:32:0)
-unable to resolve squareup.protos.kotlin.OtherMessageWithStatus.Status
-  for field b (same_name_enum.proto:34:2)
-  in message squareup.protos.kotlin.MessageUsingMultipleEnums (same_name_enum.proto:32:0)
-unable to resolve squareup.protos.kotlin.simple.SimpleMessage.NestedEnum
-  for field default_nested_enum (simple_message.proto:43:2)
-  in message squareup.protos.kotlin.simple.SimpleMessage (simple_message.proto:23:0)
-unable to resolve squareup.protos.kotlin.foreign.ForeignEnum
-  for field default_foreign_enum (simple_message.proto:52:2)
-  in message squareup.protos.kotlin.simple.SimpleMessage (simple_message.proto:23:0)
-unable to resolve squareup.protos.kotlin.foreign.ForeignEnum
-  for field no_default_foreign_enum (simple_message.proto:54:2)
-  in message squareup.protos.kotlin.simple.SimpleMessage (simple_message.proto:23:0)
-unable to resolve squareup.protos.kotlin.unknownfields.EnumVersionOne
-  for field en (unknown_fields.proto:23:2)
-  in message squareup.protos.kotlin.unknownfields.VersionOne (unknown_fields.proto:19:0)
-unable to resolve squareup.protos.kotlin.unknownfields.EnumVersionTwo
-  for field en (unknown_fields.proto:46:2)
-  in message squareup.protos.kotlin.unknownfields.VersionTwo (unknown_fields.proto:36:0)
-packed=true not permitted on bytes
-  for field pack_nested_enum (all_types.proto:100:2)
-  in message squareup.protos.kotlin.alltypes.AllTypes (all_types.proto:20:0)
+missing a zero value at the first element in proto3
+  for enum google.protobuf.FieldDescriptorProto.Type (google/protobuf/descriptor.proto)
+  in message google.protobuf.FieldDescriptorProto (google/protobuf/descriptor.proto:137:0)
+missing a zero value at the first element in proto3
+  for enum google.protobuf.FieldDescriptorProto.Label (google/protobuf/descriptor.proto)
+  in message google.protobuf.FieldDescriptorProto (google/protobuf/descriptor.proto:137:0)
+missing a zero value at the first element in proto3
+  for enum google.protobuf.FileOptions.OptimizeMode (google/protobuf/descriptor.proto)
+  in message google.protobuf.FileOptions (google/protobuf/descriptor.proto:340:0)
+missing a zero value at the first element in proto3
+  for enum squareup.protos.custom_options.FooBar.FooBarBazEnum (custom_options.proto:45:2)
+  in message squareup.protos.custom_options.FooBar (custom_options.proto:23:0)
+missing a zero value at the first element in proto3
+  for enum squareup.protos.kotlin.DeprecatedEnum (deprecated_enum.proto)
+missing a zero value at the first element in proto3
+  for enum squareup.protos.kotlin.OptionalEnumUser.OptionalEnum (optional_enum.proto)
+  in message squareup.protos.kotlin.OptionalEnumUser (optional_enum.proto:19:0)
+missing a zero value at the first element in proto3
+  for enum squareup.protos.kotlin.MessageWithStatus.Status (same_name_enum.proto)
+  in message squareup.protos.kotlin.MessageWithStatus (same_name_enum.proto:19:0)
+missing a zero value at the first element in proto3
+  for enum squareup.protos.kotlin.OtherMessageWithStatus.Status (same_name_enum.proto)
+  in message squareup.protos.kotlin.OtherMessageWithStatus (same_name_enum.proto:25:0)
 simple_message.proto needs to import external_message.proto
   for field optional_external_msg (simple_message.proto:42:2)
   in message squareup.protos.kotlin.simple.SimpleMessage (simple_message.proto:23:0)
+simple_message.proto needs to import foreign.proto
+  for field default_foreign_enum (simple_message.proto:52:2)
+  in message squareup.protos.kotlin.simple.SimpleMessage (simple_message.proto:23:0)
+simple_message.proto needs to import foreign.proto
+  for field no_default_foreign_enum (simple_message.proto:54:2)
+  in message squareup.protos.kotlin.simple.SimpleMessage (simple_message.proto:23:0)
+missing a zero value at the first element in proto3
+  for enum squareup.protos.kotlin.simple.SimpleMessage.NestedEnum (simple_message.proto:24:2)
+  in message squareup.protos.kotlin.simple.SimpleMessage (simple_message.proto:23:0)
+missing a zero value at the first element in proto3
+  for enum squareup.protos.kotlin.unknownfields.EnumVersionOne (unknown_fields.proto)
+missing a zero value at the first element in proto3
+  for enum squareup.protos.kotlin.unknownfields.EnumVersionTwo (unknown_fields.proto)
 uses_any.proto needs to import google/protobuf/any.proto
   for field just_one (uses_any.proto:22:2)
   in message squareup.protos.usesany.UsesAny (uses_any.proto:21:0)
@@ -84,8 +51,8 @@ uses_any.proto needs to import google/protobuf/any.proto
   in message squareup.protos.usesany.UsesAny (uses_any.proto:21:0)
 	at com.squareup.wire.schema.ErrorCollector.throwIfNonEmpty(ErrorCollector.kt:78)
 	at com.squareup.wire.schema.Linker.link(Linker.kt:158)
-	at com.squareup.wire.protocwire.WireGenerator.generate(WireGenerator.kt:102)
+	at com.squareup.wire.protocwire.WireGenerator.generate(WireGenerator.kt:104)
 	at com.squareup.wire.protocwire.Plugin.run(Plugin.java:209)
 	at com.squareup.wire.protocwire.Plugin.run(Plugin.java:179)
-	at com.squareup.wire.protocwire.WireGenerator$Companion.main(WireGenerator.kt:113)
+	at com.squareup.wire.protocwire.WireGenerator$Companion.main(WireGenerator.kt:115)
 	at com.squareup.wire.protocwire.WireGenerator.main(WireGenerator.kt)
