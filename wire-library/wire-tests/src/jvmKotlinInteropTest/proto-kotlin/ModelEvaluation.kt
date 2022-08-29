@@ -12,10 +12,14 @@ import com.squareup.wire.`internal`.immutableCopyOf
 import com.squareup.wire.`internal`.redactElements
 import com.squareup.wire.`internal`.sanitize
 import kotlin.Any
+import kotlin.AssertionError
 import kotlin.Boolean
+import kotlin.Deprecated
+import kotlin.DeprecationLevel
 import kotlin.Double
 import kotlin.Int
 import kotlin.Long
+import kotlin.Nothing
 import kotlin.String
 import kotlin.Unit
 import kotlin.collections.Map
@@ -24,52 +28,48 @@ import kotlin.lazy
 import okio.ByteString
 
 /**
- * Copyright 2020 Square Inc.
  *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
+ *  Copyright 2020 Square Inc.
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *  Licensed under the Apache License, Version 2.0 (the "License");
+ *  you may not use this file except in compliance with the License.
+ *  You may obtain a copy of the License at
  *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ *  http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing, software
+ *  distributed under the License is distributed on an "AS IS" BASIS,
+ *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *  See the License for the specific language governing permissions and
+ *  limitations under the License.
  */
 public class ModelEvaluation(
   @field:WireField(
     tag = 1,
     adapter = "com.squareup.wire.ProtoAdapter#STRING",
   )
-  @JvmField
   public val name: String? = null,
   @field:WireField(
     tag = 2,
     adapter = "com.squareup.wire.ProtoAdapter#DOUBLE",
   )
-  @JvmField
   public val score: Double? = null,
   models: Map<String, ModelEvaluation> = emptyMap(),
   unknownFields: ByteString = ByteString.EMPTY,
-) : Message<ModelEvaluation, ModelEvaluation.Builder>(ADAPTER, unknownFields) {
+) : Message<ModelEvaluation, Nothing>(ADAPTER, unknownFields) {
   @field:WireField(
     tag = 3,
     keyAdapter = "com.squareup.wire.ProtoAdapter#STRING",
     adapter = "ModelEvaluation#ADAPTER",
   )
-  @JvmField
   public val models: Map<String, ModelEvaluation> = immutableCopyOf("models", models)
 
-  public override fun newBuilder(): Builder {
-    val builder = Builder()
-    builder.name = name
-    builder.score = score
-    builder.models = models
-    builder.addUnknownFields(unknownFields)
-    return builder
-  }
+  @Deprecated(
+    message = "Shouldn't be used in Kotlin",
+    level = DeprecationLevel.HIDDEN,
+  )
+  public override fun newBuilder(): Nothing = throw
+      AssertionError("Builders are deprecated and only available in a javaInterop build; see https://square.github.io/wire/wire_compiler/#kotlin")
 
   public override fun equals(other: Any?): Boolean {
     if (other === this) return true
@@ -107,39 +107,6 @@ public class ModelEvaluation(
     models: Map<String, ModelEvaluation> = this.models,
     unknownFields: ByteString = this.unknownFields,
   ): ModelEvaluation = ModelEvaluation(name, score, models, unknownFields)
-
-  public class Builder : Message.Builder<ModelEvaluation, Builder>() {
-    @JvmField
-    public var name: String? = null
-
-    @JvmField
-    public var score: Double? = null
-
-    @JvmField
-    public var models: Map<String, ModelEvaluation> = emptyMap()
-
-    public fun name(name: String?): Builder {
-      this.name = name
-      return this
-    }
-
-    public fun score(score: Double?): Builder {
-      this.score = score
-      return this
-    }
-
-    public fun models(models: Map<String, ModelEvaluation>): Builder {
-      this.models = models
-      return this
-    }
-
-    public override fun build(): ModelEvaluation = ModelEvaluation(
-      name = name,
-      score = score,
-      models = models,
-      unknownFields = buildUnknownFields()
-    )
-  }
 
   public companion object {
     @JvmField

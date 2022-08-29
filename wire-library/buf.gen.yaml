@@ -6,5 +6,5 @@ managed:
     default: plugins/protoc-gen-connect-kotlin
 plugins:
   - name: connect-kotlin
-    out: gen/proto/connectkotlin
+    out: /Users/buildbreaker/development/wire/wire-library/wire-tests/src/jvmKotlinInteropTest/proto-kotlin
     path: ./wire-protoc/protoc-gen-wire-kotlin

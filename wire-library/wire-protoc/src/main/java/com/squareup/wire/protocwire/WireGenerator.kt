@@ -89,7 +89,7 @@ data class ProtocContext(
   }
 
   override fun write(file: Path, str: String) {
-    response.addFile(file.name, str)
+    response.addFile(file.toString(), str)
   }
 }
 
@@ -126,7 +126,7 @@ class WireGenerator(
   companion object {
     @JvmStatic
     fun main(args: Array<String>) {
-      val target = KotlinTarget(outDirectory = "")
+      val target = KotlinTarget(outDirectory = "", javaInterop = true)
       Plugin.run(WireGenerator(target))
     }
   }
