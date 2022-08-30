@@ -6,6 +6,8 @@ import com.google.protobuf.DescriptorProtos.DescriptorProto
 import com.google.protobuf.DescriptorProtos.EnumDescriptorProto
 import com.google.protobuf.DescriptorProtos.FieldDescriptorProto
 import com.google.protobuf.DescriptorProtos.FileDescriptorProto
+import com.google.protobuf.DescriptorProtos.MethodDescriptorProto
+import com.google.protobuf.DescriptorProtos.ServiceDescriptorProto
 import com.google.protobuf.DescriptorProtos.SourceCodeInfo
 import com.google.protobuf.Descriptors.EnumValueDescriptor
 import com.google.protobuf.DynamicMessage
@@ -34,6 +36,8 @@ import com.squareup.wire.schema.internal.parser.MessageElement
 import com.squareup.wire.schema.internal.parser.OneOfElement
 import com.squareup.wire.schema.internal.parser.OptionElement
 import com.squareup.wire.schema.internal.parser.ProtoFileElement
+import com.squareup.wire.schema.internal.parser.RpcElement
+import com.squareup.wire.schema.internal.parser.ServiceElement
 import com.squareup.wire.schema.internal.parser.TypeElement
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
@@ -146,6 +150,12 @@ private fun parseFileDescriptor(fileDescriptor: FileDescriptorProto, descs: Desc
     types.add(parseEnum(messagePath, helper, enumType, descs))
   }
 
+  val services = mutableListOf<ServiceElement>()
+  val servicePath = mutableListOf(FileDescriptorProto.SERVICE_FIELD_NUMBER, 0)
+  for ((index, service) in fileDescriptor.serviceList.withIndex()) {
+    servicePath[servicePath.size - 1] = index
+    services.add(parseService(servicePath, helper, service, descs))
+  }
 
   return ProtoFileElement(
     location = Location.get(fileDescriptor.name),
@@ -153,9 +163,52 @@ private fun parseFileDescriptor(fileDescriptor: FileDescriptorProto, descs: Desc
     publicImports = publicImports,
     packageName = if (fileDescriptor.hasPackage()) fileDescriptor.`package` else null,
     types = types,
-    services = emptyList(),
+    services = services,
     options = parseOptions(fileDescriptor.options, descs),
     syntax = Syntax.PROTO_3,
+  )
+}
+
+private fun parseService(
+  path: List<Int>,
+  helper: SourceCodeHelper,
+  service: ServiceDescriptorProto,
+  descs: DescriptorSource
+): ServiceElement {
+  val info = helper.getLocation(path)
+  val rpcs = mutableListOf<RpcElement>()
+
+  val methodPath = mutableListOf(*path.toTypedArray())
+  methodPath.addAll(listOf(ServiceDescriptorProto.METHOD_FIELD_NUMBER, 0))
+  for ((index, method) in service.methodList.withIndex()) {
+    methodPath[methodPath.size - 1] = index
+    rpcs.add(parseMethod(methodPath, helper, method, descs))
+  }
+  return ServiceElement(
+    location = info.loc,
+    name = service.name,
+    documentation = info.comment,
+    rpcs = rpcs,
+    options = parseOptions(service.options, descs)
+  )
+}
+
+private fun parseMethod(
+  path: List<Int>,
+  helper: SourceCodeHelper,
+  method: MethodDescriptorProto,
+  descs: DescriptorSource
+): RpcElement {
+  val rpcInfo = helper.getLocation(path)
+  return RpcElement(
+    location = rpcInfo.loc,
+    name = method.name,
+    documentation = rpcInfo.comment,
+    requestType = method.inputType,
+    responseType = method.outputType,
+    requestStreaming = method.clientStreaming,
+    responseStreaming = method.serverStreaming,
+    options = parseOptions(method.options, descs)
   )
 }
 

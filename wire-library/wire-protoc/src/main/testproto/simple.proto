@@ -19,6 +19,22 @@ package proto3.simple;
 
 option java_package = "com.squareup.wire.proto3.kotlin.simple";
 
+// Hello service
+service Hello {
+  // hello
+  rpc Hello(HelloRequest) returns (HelloResponse);
+  // hello stream response
+  rpc HelloStreamResponse(HelloRequest) returns (stream HelloResponse);
+  // hello stream request
+  rpc HelloStreamRequest(stream HelloRequest) returns (HelloResponse);
+  // hello bidi
+  rpc HelloBiDiStream(stream HelloRequest) returns (stream HelloResponse);
+}
+// Hello request
+message HelloRequest {}
+// Hello response
+message HelloResponse {}
+
 // This is an empty message
 message EmptyMsg {}
 
