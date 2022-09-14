@@ -34,6 +34,7 @@ import com.squareup.wire.schema.SchemaHandler
 import com.squareup.wire.schema.Target
 import com.squareup.wire.schema.internal.parser.EnumConstantElement
 import com.squareup.wire.schema.internal.parser.EnumElement
+import com.squareup.wire.schema.internal.parser.ExtendElement
 import com.squareup.wire.schema.internal.parser.FieldElement
 import com.squareup.wire.schema.internal.parser.MessageElement
 import com.squareup.wire.schema.internal.parser.OneOfElement
@@ -163,6 +164,10 @@ private fun parseFileDescriptor(fileDescriptor: FileDescriptorProto, descs: Desc
     services.add(parseService(sourceInfo, service))
   }
 
+  val extElementList = parseFields(baseSourceInfo, FileDescriptorProto.EXTENSION_FIELD_NUMBER, fileDescriptor.extensionList, emptyMap(), baseSourceInfo.descriptorSource, syntax)
+  val zippedExts = fileDescriptor.extensionList.zip(extElementList) { descriptorProto, fieldElement -> descriptorProto to fieldElement }
+  val extendsList = indexFieldsByExtendee(baseSourceInfo, FileDescriptorProto.EXTENSION_FIELD_NUMBER, zippedExts)
+
   return ProtoFileElement(
     location = Location.get(fileDescriptor.name),
     imports = imports,
@@ -170,6 +175,7 @@ private fun parseFileDescriptor(fileDescriptor: FileDescriptorProto, descs: Desc
     packageName = if (fileDescriptor.hasPackage()) fileDescriptor.`package` else null,
     types = types,
     services = services,
+    extendDeclarations = extendsList,
     options = parseOptions(fileDescriptor.options, descs),
     syntax = syntax,
   )
@@ -269,10 +275,15 @@ private fun parseMessage(baseSourceInfo: SourceInfo, packagePrefix: String, mess
    * There is a need to associate the FieldElement object with its file descriptor proto. There
    * is a need for adding new fields to FieldElement but that will be done later.
    */
-  val fieldElementList = parseFields(baseSourceInfo, message.fieldList, mapTypes, baseSourceInfo.descriptorSource, syntax)
+  val fieldElementList = parseFields(baseSourceInfo, DescriptorProto.FIELD_FIELD_NUMBER, message.fieldList, mapTypes, baseSourceInfo.descriptorSource, syntax)
   val zippedFields = message.fieldList.zip(fieldElementList) { descriptorProto, fieldElement -> descriptorProto to fieldElement }
   val oneOfIndexToFields = indexFieldsByOneOf(zippedFields)
   val fields = zippedFields.filter { pair -> !pair.first.hasOneofIndex() }.map { pair -> pair.second }
+
+  val extElementList = parseFields(baseSourceInfo, DescriptorProto.EXTENSION_FIELD_NUMBER, message.extensionList, emptyMap(), baseSourceInfo.descriptorSource, syntax)
+  val zippedExts = message.extensionList.zip(extElementList) { descriptorProto, fieldElement -> descriptorProto to fieldElement }
+  val extendsList = indexFieldsByExtendee(baseSourceInfo, DescriptorProto.EXTENSION_FIELD_NUMBER, zippedExts)
+
   return MessageElement(
     location = info.loc,
     name = message.name,
@@ -282,6 +293,7 @@ private fun parseMessage(baseSourceInfo: SourceInfo, packagePrefix: String, mess
     fields = fields,
     nestedTypes = nestedTypes,
     oneOfs = parseOneOfs(baseSourceInfo, message.oneofDeclList, oneOfIndexToFields),
+    extendDeclarations = extendsList,
     extensions = emptyList(),
     groups = emptyList(),
   )
@@ -331,15 +343,41 @@ private fun indexFieldsByOneOf(
   return oneOfMap
 }
 
+private fun indexFieldsByExtendee(
+  baseSourceInfo: SourceInfo,
+  pathTag: Int,
+  extensions: List<Pair<FieldDescriptorProto, FieldElement>>
+): List<ExtendElement> {
+  val info = baseSourceInfo.clone()
+  info.push(pathTag)
+
+  val extendeeMap = mutableMapOf<String, MutableList<FieldElement>>()
+  for ((descriptor, fieldElement) in extensions) {
+    val list = extendeeMap.getOrPut(descriptor.extendee) { mutableListOf() }
+    list.add(fieldElement)
+  }
+
+  return extendeeMap.entries.map {
+    val blockInfo = info.infoContaining(it.value[0].location)
+    ExtendElement(
+      location = blockInfo.loc,
+      documentation = blockInfo.comment,
+      name = it.key,
+      fields = it.value
+    )
+  }
+}
+
 private fun parseFields(
   baseSourceInfo: SourceInfo,
+  tag: Int,
   fieldList: List<FieldDescriptorProto>,
-  mapTypes: MutableMap<String, String>,
+  mapTypes: Map<String, String>,
   descs: DescriptorSource,
   syntax: Syntax,
 ): List<FieldElement> {
   val result = mutableListOf<FieldElement>()
-  for ((sourceInfo, field) in fieldList.withSourceInfo(baseSourceInfo, DescriptorProto.FIELD_FIELD_NUMBER)) {
+  for ((sourceInfo, field) in fieldList.withSourceInfo(baseSourceInfo, tag)) {
     var label = parseLabel(field, syntax)
     var type = parseType(field)
     if (mapTypes.keys.contains(type)) {
@@ -363,7 +401,6 @@ private fun parseFields(
 }
 
 private fun parseType(field: FieldDescriptorProto): String {
-
   return when (field.type) {
     FieldDescriptorProto.Type.TYPE_DOUBLE -> "double"
     FieldDescriptorProto.Type.TYPE_FLOAT -> "float"
@@ -485,12 +522,16 @@ private data class LocationAndComments(val comment: String, val loc: Location)
 private class SourceCodeHelper(
   fd: FileDescriptorProto
 ) {
-  val locs: Map<List<Int>, SourceCodeInfo.Location> = makeLocationMap(fd.sourceCodeInfo.locationList)
+  val locs: Map<List<Int>, List<SourceCodeInfo.Location>> = makeLocationMap(fd.sourceCodeInfo.locationList)
   val baseLoc: Location = Location.get(fd.name)
 
   fun getLocation(path: List<Int>): LocationAndComments {
-    val l = locs[path]
-    val loc = if (l == null) baseLoc else baseLoc.at(l.getSpan(0), l.getSpan(1))
+    val l = locs[path]?.firstOrNull()
+    return toLocationAndComments(l)
+  }
+
+  private fun toLocationAndComments(l: SourceCodeInfo.Location?): LocationAndComments {
+    val loc = if (l == null) baseLoc else baseLoc.at(l.getSpan(0)+1, l.getSpan(1)+1)
     var comment = l?.leadingComments
     if ((comment ?: "") == "") {
       comment = l?.trailingComments
@@ -498,14 +539,36 @@ private class SourceCodeHelper(
     return LocationAndComments(comment ?: "", loc)
   }
 
-  private fun makeLocationMap(locs: List<SourceCodeInfo.Location>): Map<List<Int>, SourceCodeInfo.Location> {
-    val m = mutableMapOf<List<Int>, SourceCodeInfo.Location>()
+  fun findLocationContaining(path: List<Int>, other: Location): LocationAndComments {
+    val matches = locs[path]
+    if (!matches.isNullOrEmpty()) {
+      for (loc: SourceCodeInfo.Location in matches) {
+        val startLine = loc.getSpan(0)+1
+        val startCol = loc.getSpan(1)+1
+        val endLine = if (loc.spanCount > 3) loc.getSpan(2)+1 else startLine
+        val endCol = loc.getSpan(if (loc.spanCount > 3) 3 else 2)+1
+        if (
+          (startLine < other.line || (startLine == other.line && startCol <= other.column))
+          && (endLine > other.line || (endLine == other.line && endCol >= other.column))
+        ) {
+          // found a location that contains the given one
+          return toLocationAndComments(loc)
+        }
+      }
+    }
+    // no match found
+    return toLocationAndComments(null)
+  }
+
+  private fun makeLocationMap(locs: List<SourceCodeInfo.Location>): Map<List<Int>, List<SourceCodeInfo.Location>> {
+    val m = mutableMapOf<List<Int>, MutableList<SourceCodeInfo.Location>>()
     for (loc in locs) {
       val path = mutableListOf<Int>()
       for (pathElem in loc.pathList) {
         path.add(pathElem)
       }
-      m[path] = loc
+      val locList = m.getOrPut(path) { mutableListOf() }
+      locList.add(loc)
     }
     return m
   }
@@ -530,6 +593,10 @@ private class SourceInfo(
 
   fun info(): LocationAndComments {
     return helper.getLocation(path)
+  }
+
+  fun infoContaining(loc: Location): LocationAndComments {
+    return helper.findLocationContaining(path, loc)
   }
 
   fun clone(): SourceInfo {
