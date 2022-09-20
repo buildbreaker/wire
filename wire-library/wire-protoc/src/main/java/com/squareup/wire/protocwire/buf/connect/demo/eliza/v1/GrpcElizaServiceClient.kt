@@ -2,13 +2,12 @@
 // Source: buf.connect.demo.eliza.v1.ElizaService in simple.proto
 package buf.connect.demo.eliza.v1
 
-import com.squareup.wire.GrpcClient
 import com.squareup.wire.GrpcMethod
 import com.squareup.wire.GrpcResponse
 import com.squareup.wire.internal.GrpcMessageSource
 import com.squareup.wire.internal.grpcResponseToException
-import com.squareup.wire.internal.messageSink
 import com.squareup.wire.internal.newDuplexRequestBody
+import com.squareup.wire.toHttpUrl
 import java.io.IOException
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
@@ -21,8 +20,8 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import okhttp3.Call
 import okhttp3.Callback
-import okhttp3.HttpUrl
 import okhttp3.Request
+import okio.Buffer
 
 /**
  * ElizaService provides a way to talk to the ELIZA, which is a port of
@@ -32,13 +31,10 @@ import okhttp3.Request
  * DOCTOR simulates a psychotherapist, and is commonly found as an Easter
  * egg in emacs distributions.
  */
-public class GrpcElizaServiceClient(
+public class GrpcElizaServiceClient constructor(
   private val client: Call.Factory,
-  private val baseUrl: HttpUrl
+  private val baseUrl: String
 ) : ElizaServiceClient {
-
-  constructor(client: GrpcClient) : this(client.client, client.baseUrl)
-
 
   fun converse(scope: CoroutineScope): Pair<SendChannel<ConverseRequest>, ReceiveChannel<ConverseResponse>> {
     val method = GrpcMethod(
@@ -52,7 +48,7 @@ public class GrpcElizaServiceClient(
     val requestMetadata = emptyMap<String, String>()
     val call = client.newCall(
       Request.Builder()
-        .url(baseUrl.resolve(method.path)!!)
+        .url(baseUrl.toHttpUrl().resolve(method.path)!!.toUrl())
         .addHeader("te", "trailers")
         .addHeader("grpc-trace-bin", "")
         .addHeader("grpc-accept-encoding", "gzip")
@@ -77,22 +73,26 @@ public class GrpcElizaServiceClient(
       }
     }
     scope.launch(Dispatchers.IO) {
-      val requestWriter = requestBody.messageSink(minMessageToCompress = Long.MAX_VALUE,
-        requestAdapter = method.requestAdapter,
-        callForCancel = call
-      )
+      val sink = requestBody.createSink()
       try {
-        requestWriter.use {
+        sink.use {
           var channelReadFailed = true
           try {
             requestChannel.consumeEach { message ->
               channelReadFailed = false
-              requestWriter.write(message)
+              val encodedMessage = Buffer()
+              method.requestAdapter.encode(encodedMessage, message)
+              val buffer = Buffer()
+              buffer.writeByte(0)
+              buffer.writeInt(encodedMessage.size.toInt())
+              buffer.writeAll(encodedMessage)
+              sink.writeAll(buffer)
+              sink.flush()
               channelReadFailed = true
             }
             channelReadFailed = false
           } finally {
-            if (channelReadFailed) requestWriter.cancel()
+            if (channelReadFailed) call.cancel()
           }
         }
       } catch (e: Throwable) {
