@@ -18,5 +18,5 @@ public interface ElizaServiceClient : Service {
    * Converse is a bi-directional streaming request demo. This method should allow for
    * many requests and many responses.
    */
-  public fun Converse(): GrpcStreamingCall<ConverseRequest, ConverseResponse>
+//  public fun Converse(): GrpcStreamingCall<ConverseRequest, ConverseResponse>
 }

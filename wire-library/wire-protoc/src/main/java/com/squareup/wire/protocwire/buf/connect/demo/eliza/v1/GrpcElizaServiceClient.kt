@@ -4,12 +4,10 @@ package buf.connect.demo.eliza.v1
 
 import com.squareup.wire.GrpcClient
 import com.squareup.wire.GrpcMethod
-import com.squareup.wire.GrpcRequestBuilder
 import com.squareup.wire.GrpcResponse
-import com.squareup.wire.internal.RealGrpcStreamingCall
+import com.squareup.wire.internal.GrpcMessageSource
 import com.squareup.wire.internal.grpcResponseToException
 import com.squareup.wire.internal.messageSink
-import com.squareup.wire.internal.messageSource
 import com.squareup.wire.internal.newDuplexRequestBody
 import java.io.IOException
 import kotlinx.coroutines.CancellationException
@@ -23,6 +21,8 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import okhttp3.Call
 import okhttp3.Callback
+import okhttp3.HttpUrl
+import okhttp3.Request
 
 /**
  * ElizaService provides a way to talk to the ELIZA, which is a port of
@@ -33,20 +33,12 @@ import okhttp3.Callback
  * egg in emacs distributions.
  */
 public class GrpcElizaServiceClient(
-  private val client: GrpcClient,
+  private val client: Call.Factory,
+  private val baseUrl: HttpUrl
 ) : ElizaServiceClient {
-  /**
-   * Converse is a bi-directional streaming request demo. This method should allow for
-   * many requests and many responses.
-   */
-  public override fun Converse(): RealGrpcStreamingCall<ConverseRequest, ConverseResponse> {
-    val method = GrpcMethod(
-      path = "/buf.connect.demo.eliza.v1.ElizaService/Converse",
-      requestAdapter = ConverseRequest.ADAPTER,
-      responseAdapter = ConverseResponse.ADAPTER
-    )
-    return RealGrpcStreamingCall(client, method)
-  }
+
+  constructor(client: GrpcClient) : this(client.client, client.baseUrl)
+
 
   fun converse(scope: CoroutineScope): Pair<SendChannel<ConverseRequest>, ReceiveChannel<ConverseResponse>> {
     val method = GrpcMethod(
@@ -58,16 +50,16 @@ public class GrpcElizaServiceClient(
     val responseChannel = Channel<ConverseResponse>(1)
     val requestBody = newDuplexRequestBody()
     val requestMetadata = emptyMap<String, String>()
-    val call = client.client.newCall(
-      GrpcRequestBuilder()
-        .url(client.baseUrl.resolve(method.path)!!)
+    val call = client.newCall(
+      Request.Builder()
+        .url(baseUrl.resolve(method.path)!!)
         .addHeader("te", "trailers")
         .addHeader("grpc-trace-bin", "")
         .addHeader("grpc-accept-encoding", "gzip")
         .apply {
-          if (client.minMessageToCompress < Long.MAX_VALUE) {
-            addHeader("grpc-encoding", "gzip")
-          }
+//          if (client.minMessageToCompress < Long.MAX_VALUE) {
+//            addHeader("grpc-encoding", "gzip")
+//          }
           for ((key, value) in requestMetadata) {
             addHeader(key, value)
           }
@@ -85,7 +77,7 @@ public class GrpcElizaServiceClient(
       }
     }
     scope.launch(Dispatchers.IO) {
-      val requestWriter = requestBody.messageSink(minMessageToCompress = client.minMessageToCompress,
+      val requestWriter = requestBody.messageSink(minMessageToCompress = Long.MAX_VALUE,
         requestAdapter = method.requestAdapter,
         callForCancel = call
       )
@@ -119,7 +111,8 @@ public class GrpcElizaServiceClient(
       override fun onResponse(call: Call, response: GrpcResponse) {
         runBlocking {
           response.use {
-            response.messageSource(method.responseAdapter).use { reader ->
+            val source = GrpcMessageSource(response.body!!.source(), method.responseAdapter, response.header("grpc-encoding"))
+            source.use { reader ->
               var exception: Exception? = null
               try {
                 while (true) {

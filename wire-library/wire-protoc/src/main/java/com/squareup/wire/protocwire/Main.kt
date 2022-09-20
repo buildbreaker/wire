@@ -55,41 +55,5 @@ class Main {
         job.join()
       }
     }
-
-    private fun grpc() {
-      val target = "http://127.0.0.1:8080"
-      val grpcClient = GrpcClient.Builder().baseUrl(target)
-        .client(
-          OkHttpClient.Builder().readTimeout(Duration.ofMinutes(1))
-            .writeTimeout(Duration.ofMinutes(1))
-            .callTimeout(Duration.ofMinutes(1))
-            .protocols(listOf(Protocol.H2_PRIOR_KNOWLEDGE))
-            .build()
-        )
-        .build()
-      val serviceClient = GrpcElizaServiceClient(grpcClient)
-      val streamingCoroutineScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
-      val job = streamingCoroutineScope.launch {
-        val converseStream = serviceClient.Converse()
-        val (send, rec) = converseStream.execute2(this)
-        val job = launch(newSingleThreadContext("response_channel")) {
-          while (true) {
-            if (rec.isClosedForReceive) break
-            val response = rec.receive()
-            println(response.sentence)
-          }
-        }
-        send.send(
-          ConverseRequest(
-            sentence = "I feel happy"
-          )
-        )
-        println("converse sent...")
-        job.join()
-      }
-      runBlocking {
-        job.join()
-      }
-    }
   }
 }
