@@ -111,12 +111,17 @@ public class GrpcElizaServiceClient constructor(
       override fun onResponse(call: Call, response: GrpcResponse) {
         runBlocking {
           response.use {
-            val source = GrpcMessageSource(response.body!!.source(), method.responseAdapter, response.header("grpc-encoding"))
-            source.use { reader ->
+            response.body!!.source().use { reader ->
               var exception: Exception? = null
               try {
                 while (true) {
-                  val message = reader.read() ?: break
+                  if (reader.exhausted()) break
+                  reader.readByte()
+                  val length = reader.readInt().toLong() and 0xffffffffL
+                  val encodedMessage = Buffer().write(reader, length)
+                  val message = encodedMessage.use { buffer ->
+                    method.responseAdapter.decode(buffer)
+                  }
                   responseChannel.send(message)
                 }
                 exception = response.grpcResponseToException()
@@ -136,6 +141,8 @@ public class GrpcElizaServiceClient constructor(
         }
       }
     })
+
+
 
     return requestChannel to responseChannel
   }
