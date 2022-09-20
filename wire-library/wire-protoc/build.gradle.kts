@@ -58,6 +58,7 @@ java {
 dependencies {
   implementation(libs.protobuf.java)
   implementation(projects.wireSchema)
+  implementation(projects.wireGrpcClient)
   implementation(projects.wireCompiler)
   implementation(projects.wireKotlinGenerator) // This is kind of needed
   implementation("com.squareup.okio:okio-fakefilesystem-jvm:3.2.0")

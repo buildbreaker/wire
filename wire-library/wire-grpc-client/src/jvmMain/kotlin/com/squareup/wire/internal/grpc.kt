@@ -34,6 +34,7 @@ import okhttp3.RequestBody
 import okio.BufferedSink
 import okio.IOException
 import java.io.Closeable
+import okhttp3.Headers
 
 internal val APPLICATION_GRPC_MEDIA_TYPE: MediaType = "application/grpc".toMediaType()
 
@@ -65,12 +66,12 @@ internal fun <S : Any> newRequestBody(
  * Returns a new duplex request body that allows us to write request messages even after the
  * response status, headers, and body have been received.
  */
-internal fun newDuplexRequestBody(): PipeDuplexRequestBody {
+fun newDuplexRequestBody(): PipeDuplexRequestBody {
   return PipeDuplexRequestBody(APPLICATION_GRPC_MEDIA_TYPE, pipeMaxBufferSize = 1024 * 1024)
 }
 
 /** Writes messages to the request body. */
-internal fun <S : Any> PipeDuplexRequestBody.messageSink(
+ fun <S : Any> PipeDuplexRequestBody.messageSink(
   minMessageToCompress: Long,
   requestAdapter: ProtoAdapter<S>,
   callForCancel: Call
@@ -83,8 +84,8 @@ internal fun <S : Any> PipeDuplexRequestBody.messageSink(
 )
 
 /** Sends the response messages to the channel. */
-internal fun <R : Any> SendChannel<R>.readFromResponseBodyCallback(
-  grpcCall: RealGrpcStreamingCall<*, R>,
+fun <R : Any> SendChannel<R>.readFromResponseBodyCallback(
+  grpcCall: (Headers) -> Unit,
   responseAdapter: ProtoAdapter<R>
 ): Callback {
   return object : Callback {
@@ -94,7 +95,7 @@ internal fun <R : Any> SendChannel<R>.readFromResponseBodyCallback(
     }
 
     override fun onResponse(call: Call, response: GrpcResponse) {
-      grpcCall.responseMetadata = response.headers.toMap()
+      grpcCall(response.headers)
       runBlocking {
         response.use {
           response.messageSource(responseAdapter).use { reader ->
@@ -136,7 +137,7 @@ internal fun <R : Any> SendChannel<R>.readFromResponseBodyCallback(
  * If it fails either reading or writing we need to call [MessageSink.close] (via [Closeable.use])
  * and [ReceiveChannel.cancel].
  */
-internal suspend fun <S : Any> ReceiveChannel<S>.writeToRequestBody(
+ suspend fun <S : Any> ReceiveChannel<S>.writeToRequestBody(
   requestBody: PipeDuplexRequestBody,
   minMessageToCompress: Long,
   requestAdapter: ProtoAdapter<S>,
@@ -166,7 +167,7 @@ internal suspend fun <S : Any> ReceiveChannel<S>.writeToRequestBody(
 }
 
 /** Reads messages from the response body. */
-internal fun <R : Any> GrpcResponse.messageSource(
+ fun <R : Any> GrpcResponse.messageSource(
   protoAdapter: ProtoAdapter<R>
 ): GrpcMessageSource<R> {
   checkGrpcResponse()
@@ -188,7 +189,7 @@ private fun GrpcResponse.checkGrpcResponse() {
 }
 
 /** Returns an exception if the gRPC call didn't have a grpc-status of 0. */
-internal fun GrpcResponse.grpcResponseToException(suppressed: IOException? = null): IOException? {
+ fun GrpcResponse.grpcResponseToException(suppressed: IOException? = null): IOException? {
   var trailers = headersOf()
   var transportException = suppressed
   try {

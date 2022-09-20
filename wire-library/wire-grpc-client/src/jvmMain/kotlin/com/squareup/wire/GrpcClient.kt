@@ -24,9 +24,9 @@ import okhttp3.Protocol.HTTP_2
 import kotlin.reflect.KClass
 
 actual class GrpcClient private constructor(
-  internal val client: Call.Factory,
-  internal val baseUrl: GrpcHttpUrl,
-  internal val minMessageToCompress: Long
+   val client: Call.Factory,
+  val baseUrl: GrpcHttpUrl,
+  val minMessageToCompress: Long
 ) {
   /** Returns a [T] that makes gRPC calls using this client. */
   inline fun <reified T : Service> create(): T = create(T::class)
@@ -71,7 +71,7 @@ actual class GrpcClient private constructor(
       .minMessageToCompress(minMessageToCompress)
   }
 
-  internal fun newCall(
+  fun newCall(
     method: GrpcMethod<*, *>,
     requestMetadata: Map<String, String>,
     requestBody: GrpcRequestBody
