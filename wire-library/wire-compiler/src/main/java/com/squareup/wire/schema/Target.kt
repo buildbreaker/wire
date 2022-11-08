@@ -267,6 +267,7 @@ data class KotlinTarget(
           grpcServerCompatible = grpcServerCompatible,
           nameSuffix = nameSuffix,
           buildersOnly = buildersOnly,
+          singleMethodServices = singleMethodServices,
         )
         context.createDirectories(context.outDirectory)
         super.handle(schema, context)
