@@ -22,7 +22,7 @@ import com.squareup.wire.schema.internal.appendDocumentation
 import com.squareup.wire.schema.internal.appendOptions
 import com.squareup.wire.schema.internal.toEnglishLowerCase
 
-data class FieldElement constructor(
+data class FieldElement(
   val location: Location,
   val label: Field.Label? = null,
   val type: String,
