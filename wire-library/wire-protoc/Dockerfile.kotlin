@@ -3,7 +3,7 @@ ENV GOOS=linux GOARCH=amd64 CGO_ENABLED=0
 RUN bash -c 'find /go/bin/${GOOS}_${GOARCH}/ -mindepth 1 -maxdepth 1 -exec mv {} /go/bin \;'
 
 FROM openjdk:8-jre-slim
-COPY build/libs/protoc-kotlin-4.5.0-SNAPSHOT-standalone.jar /protoc-kotlin.jar
-COPY protoc-gen-wire-kotlin /
+COPY wire-protoc/build/libs/protoc-kotlin-4.5.0-SNAPSHOT-standalone.jar /protoc-kotlin.jar
+COPY wire-protoc/protoc-gen-wire-kotlin /
 
 ENTRYPOINT ["/protoc-gen-wire-kotlin"]

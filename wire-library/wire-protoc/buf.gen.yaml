@@ -1,13 +1,10 @@
 version: v1
-managed:
-  enabled: true
-  optimize_for: LITE_RUNTIME
-  go_package_prefix:
-    default: plugins/protoc-gen-connect-kotlin
 plugins:
   - name: protoc-gen-wire-kotlin
     out: gen/proto/kotlinout
     path: ./protoc-gen-wire-kotlin
+  - remote: buf.build/achiu/plugins/wire-kotlin:v0.0.3-p
+    out: gen/proto/wireout
 # remote generation reference
 #  - remote: buf.build/achiu/plugins/pg-wire-kotlin:v0.0.1
 #    out: gen/proto/remotekotlinout
