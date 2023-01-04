@@ -45,6 +45,7 @@ import com.squareup.wire.schema.internal.parser.ServiceElement
 import com.squareup.wire.schema.internal.parser.TypeElement
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
+import java.util.Locale
 import okio.Path
 import okio.Path.Companion.toPath
 
@@ -104,11 +105,12 @@ class WireGenerator(
     val loader = CoreLoader
     val errorCollector = ErrorCollector()
     val linker = Linker(loader, errorCollector, permitPackageCycles = true, loadExhaustively = true)
+    val configuration = request.parameter.parseOptions()
 
     val sourcePaths = setOf(*request.fileToGenerateList.toTypedArray())
     val protoFiles = mutableListOf<ProtoFile>()
     for (fileDescriptorProto in request.protoFileList) {
-      val protoFileElement = parseFileDescriptor(fileDescriptorProto, descs)
+      val protoFileElement = parseFileDescriptor(configuration, fileDescriptorProto, descs)
       val protoFile = ProtoFile.get(protoFileElement)
       protoFiles.add(protoFile)
     }
@@ -135,7 +137,11 @@ class WireGenerator(
   }
 }
 
-private fun parseFileDescriptor(fileDescriptor: FileDescriptorProto, descs: DescriptorSource): ProtoFileElement {
+private fun parseFileDescriptor(
+  configuration: Configuration,
+  fileDescriptor: FileDescriptorProto,
+  descs: DescriptorSource
+): ProtoFileElement {
   val packagePrefix = if (fileDescriptor.hasPackage()) ".${fileDescriptor.`package`}" else ""
 
   val imports = mutableListOf<String>()
@@ -160,8 +166,13 @@ private fun parseFileDescriptor(fileDescriptor: FileDescriptorProto, descs: Desc
   }
 
   val services = mutableListOf<ServiceElement>()
-  for ((sourceInfo, service) in fileDescriptor.serviceList.withSourceInfo(baseSourceInfo, FileDescriptorProto.SERVICE_FIELD_NUMBER)) {
-    services.add(parseService(sourceInfo, service))
+  if (configuration.generateWireGRPC) {
+    for ((sourceInfo, service) in fileDescriptor.serviceList.withSourceInfo(
+      baseSourceInfo,
+      FileDescriptorProto.SERVICE_FIELD_NUMBER
+    )) {
+      services.add(parseService(sourceInfo, service))
+    }
   }
 
   val extElementList = parseFields(baseSourceInfo, FileDescriptorProto.EXTENSION_FIELD_NUMBER, fileDescriptor.extensionList, emptyMap(), baseSourceInfo.descriptorSource, syntax)
@@ -615,3 +626,16 @@ private fun <T> List<T>.withSourceInfo(sourceInfo: SourceInfo, value: Int): List
   }
   return result
 }
+
+private const val INCLUDE_WIRE_GRPC_SERVICES = "grpc"
+
+private fun String.parseOptions(): Configuration {
+  val components = trim().split(',').map { str -> str.trim().lowercase(Locale.US) }
+  return Configuration(
+    generateWireGRPC = components.contains(INCLUDE_WIRE_GRPC_SERVICES)
+  )
+}
+
+data class Configuration(
+  val generateWireGRPC: Boolean = false
+)
