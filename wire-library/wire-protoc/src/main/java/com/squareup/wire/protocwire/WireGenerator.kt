@@ -16,6 +16,7 @@ import com.google.protobuf.compiler.PluginProtos
 import com.squareup.wire.Syntax
 import com.squareup.wire.WireLogger
 import com.squareup.wire.protocwire.Plugin.DescriptorSource
+import com.squareup.wire.protocwire.cmd.StubbedRequestDebugging.Companion.debug
 import com.squareup.wire.schema.ClaimedDefinitions
 import com.squareup.wire.schema.ClaimedPaths
 import com.squareup.wire.schema.CoreLoader

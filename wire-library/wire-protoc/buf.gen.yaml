@@ -1,10 +1,13 @@
 version: v1
+managed:
+  enabled: true
+  java_package_prefix: "build"
 plugins:
-  - name: protoc-gen-wire-kotlin
+  - name: protoc-gen-wire-kotlin-remote
     out: gen/proto/kotlinout
     path: ./protoc-gen-wire-kotlin
-  - remote: buf.build/achiu/plugins/wire-kotlin:v0.0.3-p
-    out: gen/proto/wireout
+#  - remote: buf.build/achiu/plugins/wire-kotlin:v0.0.3-p
+#    out: gen/proto/wireout
 # remote generation reference
 #  - remote: buf.build/achiu/plugins/pg-wire-kotlin:v0.0.1
 #    out: gen/proto/remotekotlinout
