@@ -124,7 +124,7 @@ abstract class SchemaHandler {
 
     override fun write(file: Path, str: String) {
       fileSystem.write(file, false) {
-        write(str.commonAsUtf8ToByteArray())
+        writeUtf8(str)
       }
     }
   }

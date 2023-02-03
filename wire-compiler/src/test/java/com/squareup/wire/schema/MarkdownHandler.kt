@@ -36,10 +36,9 @@ private class MarkdownHandler : SchemaHandler() {
   }
   private fun writeMarkdownFile(protoType: ProtoType, markdown: String, context: SchemaContext): Path {
     val outDirectory = context.outDirectory
-    val fileSystem = context.fileSystem
     val path = outDirectory / toPath(protoType).joinToString(separator = "/")
-    fileSystem.createDirectories(path.parent!!)
-    fileSystem.write(path) { writeUtf8(markdown) }
+    context.createDirectories(path.parent!!)
+    context.write(path, markdown)
     return path
   }
 
