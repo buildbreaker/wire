@@ -62,7 +62,7 @@ class LogToFileHandlerTest {
       logger = WireTestLogger(),
       sourcePathPaths = setOf("test/message.proto", "test/service.proto"),
     )
-    LogToFileHandler().handle(schema, context)
+    LogToFileHandler(context.fileSystem).handle(schema, context)
 
     val content = context.fileSystem.read("log.txt".toPath(), BufferedSource::readUtf8)
     val expected = """
