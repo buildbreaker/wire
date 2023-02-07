@@ -17,6 +17,7 @@ package com.squareup.wire.recipes
 
 import com.squareup.wire.schema.Extend
 import com.squareup.wire.schema.Field
+import com.squareup.wire.schema.SchemaContext
 import com.squareup.wire.schema.SchemaHandler
 import com.squareup.wire.schema.Service
 import com.squareup.wire.schema.Type
@@ -28,27 +29,18 @@ import okio.buffer
 class LogToFileHandler : SchemaHandler() {
   private val filePath = "log.txt".toPath()
 
-  override fun handle(type: Type, context: SchemaHandler.FileSystemContext): Path? {
-    context.fileSystem.appendingSink(filePath).buffer().use {
-      it.writeUtf8("Generating type: ${type.type}\n")
-    }
-
+  override fun handle(type: Type, context: SchemaContext): Path? {
+    context.write(filePath, "Generating type: ${type.type}\n")
     return null
   }
 
-  override fun handle(service: Service, context: SchemaHandler.FileSystemContext): List<Path> {
-    context.fileSystem.appendingSink(filePath).buffer().use {
-      it.writeUtf8("Generating service: ${service.type}\n")
-    }
-
+  override fun handle(service: Service, context: SchemaContext): List<Path> {
+    context.write(filePath, "Generating service: ${service.type}\n")
     return listOf()
   }
 
-  override fun handle(extend: Extend, field: Field, context: SchemaHandler.FileSystemContext): Path? {
-    context.fileSystem.appendingSink(filePath).buffer().use {
-      it.writeUtf8("Generating ${extend.type} on ${field.location}\n")
-    }
-
+  override fun handle(extend: Extend, field: Field, context: SchemaContext): Path? {
+    context.write(filePath, "Generating ${extend.type} on ${field.location}\n")
     return null
   }
 }
