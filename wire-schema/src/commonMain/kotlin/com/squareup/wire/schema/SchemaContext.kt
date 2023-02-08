@@ -65,7 +65,7 @@ interface SchemaContext {
    * [SwiftTarget][com.squareup.wire.schema.SwiftTarget], the name will be "Swift". For
    * [ProtoTarget][com.squareup.wire.schema.ProtoTarget], the name will be "Proto".
    */
-  fun artifactHandled(qualifiedName: String, targetName: String)
+  fun logArtifactHandled(qualifiedName: String, targetName: String)
 
   /** True if this [protoFile] ia part of a `sourcePath` root. */
   fun inSourcePath(protoFile: ProtoFile): Boolean

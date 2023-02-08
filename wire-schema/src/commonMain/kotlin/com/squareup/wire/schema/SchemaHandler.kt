@@ -19,7 +19,6 @@ import com.squareup.wire.WireLogger
 import com.squareup.wire.internal.Serializable
 import okio.FileSystem
 import okio.Path
-import okio.internal.commonAsUtf8ToByteArray
 
 /** A [SchemaHandler] [handle]s [Schema]! */
 abstract class SchemaHandler {
@@ -111,7 +110,7 @@ abstract class SchemaHandler {
     init {
         fileSystem.createDirectories(outDirectory)
     }
-    override fun artifactHandled(qualifiedName: String, targetName: String) {
+    override fun logArtifactHandled(qualifiedName: String, targetName: String) {
       logger.artifactHandled(outDirectory, qualifiedName, targetName)
     }
 

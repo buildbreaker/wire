@@ -160,7 +160,7 @@ data class JavaTarget(
         val filePath = javaFile.packageName.replace(".", "/").toPath() /
           "${javaTypeName.simpleName()}.java"
 
-        context.artifactHandled(
+        context.logArtifactHandled(
           "${javaFile.packageName}.${javaFile.typeSpec.name}", "Java"
         )
         return try {
@@ -325,7 +325,7 @@ data class KotlinTarget(
           .build()
         val filePath = kotlinFile.packageName.replace(".", "/").toPath() /
           "${kotlinFile.name}.kt"
-        context.artifactHandled(
+        context.logArtifactHandled(
           "${kotlinFile.packageName}.${(kotlinFile.members.first() as TypeSpec).name}",
           "Kotlin"
         )
@@ -383,7 +383,7 @@ data class SwiftTarget(
           .build()
 
         val filePath = "${swiftFile.name}.swift".toPath()
-        context.artifactHandled(
+        context.logArtifactHandled(
           "${swiftFile.moduleName}.${typeName.canonicalName}", "Swift"
         )
         return try {
@@ -435,7 +435,7 @@ data class ProtoTarget(
           val relativePath = protoFile.location.path
             .substringBeforeLast("/", missingDelimiterValue = ".").toPath()
           val outputFilePath = relativePath / "${protoFile.name()}.proto"
-          context.artifactHandled(protoFile.location.path, "Proto")
+          context.logArtifactHandled(protoFile.location.path, "Proto")
           try {
             context.write(outputFilePath, protoFile.toSchema())
           } catch (e: IOException) {
