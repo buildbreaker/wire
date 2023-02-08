@@ -15,14 +15,9 @@
  */
 package com.squareup.wire.schema
 
-import com.squareup.wire.WireLogger
 import okio.Path
 
 interface SchemaContext {
-  /** Location on [fileSystem] where the [SchemaHandler] is to write files, if it needs to. */
-  val outDirectory: Path
-  /** Event-listener like logger with which [SchemaHandler] can notify handled artifacts. */
-  val logger: WireLogger
   /**
    * Object to be used by the [SchemaHandler] to store errors. After all [SchemaHandler]s are
    * finished, Wire will throw an exception if any error are present inside the collector.
@@ -58,10 +53,31 @@ interface SchemaContext {
    */
   val profileLoader: ProfileLoader?
 
+  /**
+   * This is called when an artifact is handled by a
+   * [SchemaHandler][com.squareup.wire.schema.Target.SchemaHandler].
+   * @param qualifiedName is the file path when generating a `.proto` file, the type or service
+   *   name prefixed with its package name when generating a `.java` or `.kt` file, and the type
+   *   name when generating a `.swift` file.
+   * @param targetName is used to identify the concerned target. For
+   * [JavaTarget][com.squareup.wire.schema.JavaTarget], the name will be "Java". For
+   * [KotlinTarget][com.squareup.wire.schema.KotlinTarget], the name will be "Kotlin". For
+   * [SwiftTarget][com.squareup.wire.schema.SwiftTarget], the name will be "Swift". For
+   * [ProtoTarget][com.squareup.wire.schema.ProtoTarget], the name will be "Proto".
+   */
+  fun artifactHandled(qualifiedName: String, targetName: String)
+
+  /** True if this [protoFile] ia part of a `sourcePath` root. */
   fun inSourcePath(protoFile: ProtoFile): Boolean
+
+  /** True if this [location] ia part of a `sourcePath` root. */
   fun inSourcePath(location: Location): Boolean
 
-  fun createDirectories(dir: Path, mustCreate: Boolean = false)
-
-  fun write(file: Path, str: String)
+  /**
+   * Writes the contents into the file.
+   * As a side effect, this will create the destination directory.
+   * @param file is the file path to use to write to.
+   * @param str is the content of the file.
+   */
+  fun write(file: Path, str: String): Path
 }

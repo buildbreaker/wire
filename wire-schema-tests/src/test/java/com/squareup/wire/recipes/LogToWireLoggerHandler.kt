@@ -26,16 +26,16 @@ import okio.Path
 /** Sample schema handler which logs handled types and services. */
 class LogToWireLoggerHandler : SchemaHandler() {
   override fun handle(type: Type, context: SchemaContext): Path? {
-    context.logger.artifactHandled(
-      context.outDirectory, type.type.enclosingTypeOrPackage ?: "", type.type.simpleName
+    context.artifactHandled(
+      type.type.enclosingTypeOrPackage ?: "", type.type.simpleName
     )
 
     return null
   }
 
   override fun handle(service: Service, context: SchemaContext): List<Path> {
-    context.logger.artifactHandled(
-      context.outDirectory, service.type.enclosingTypeOrPackage ?: "", service.type.simpleName
+    context.artifactHandled(
+      service.type.enclosingTypeOrPackage ?: "", service.type.simpleName
     )
 
     return listOf()

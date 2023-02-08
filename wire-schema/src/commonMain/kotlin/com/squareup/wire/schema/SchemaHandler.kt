@@ -68,11 +68,11 @@ abstract class SchemaHandler {
    */
   data class FileSystemContext(
     /** To be used by the [SchemaHandler] for reading/writing operations on disk. */
-    val fileSystem: FileSystem,
+    private val fileSystem: FileSystem,
     /** Location on [fileSystem] where the [SchemaHandler] is to write files, if it needs to. */
-    override val outDirectory: Path,
+    private val outDirectory: Path,
     /** Event-listener like logger with which [SchemaHandler] can notify handled artifacts. */
-    override val logger: WireLogger,
+    private val logger: WireLogger,
     /**
      * Object to be used by the [SchemaHandler] to store errors. After all [SchemaHandler]s are
      * finished, Wire will throw an exception if any error are present inside the collector.
@@ -108,6 +108,13 @@ abstract class SchemaHandler {
      */
     override  val profileLoader: ProfileLoader? = null,
   ): SchemaContext {
+    init {
+        fileSystem.createDirectories(outDirectory)
+    }
+    override fun artifactHandled(qualifiedName: String, targetName: String) {
+      logger.artifactHandled(outDirectory, qualifiedName, targetName)
+    }
+
     /** True if this [protoFile] ia part of a `sourcePath` root. */
     override fun inSourcePath(protoFile: ProtoFile): Boolean {
       return inSourcePath(protoFile.location)
@@ -118,14 +125,13 @@ abstract class SchemaHandler {
       return sourcePathPaths == null || location.path in sourcePathPaths
     }
 
-    override fun createDirectories(dir: Path, mustCreate: Boolean) {
-      fileSystem.createDirectories(dir, mustCreate)
-    }
-
-    override fun write(file: Path, str: String) {
-      fileSystem.write(file, false) {
+    override fun write(file: Path, str: String): Path {
+      val output = outDirectory / file
+      fileSystem.createDirectories(outDirectory / file.parent!!)
+      fileSystem.write(output, false) {
         writeUtf8(str)
       }
+      return output
     }
   }
 

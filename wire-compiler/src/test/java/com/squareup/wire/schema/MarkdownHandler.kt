@@ -16,6 +16,7 @@
 package com.squareup.wire.schema
 
 import okio.Path
+import okio.Path.Companion.toPath
 
 class MarkdownHandlerFactory : SchemaHandler.Factory {
   override fun create(): SchemaHandler = MarkdownHandler()
@@ -35,9 +36,7 @@ private class MarkdownHandler : SchemaHandler() {
     return null
   }
   private fun writeMarkdownFile(protoType: ProtoType, markdown: String, context: SchemaContext): Path {
-    val outDirectory = context.outDirectory
-    val path = outDirectory / toPath(protoType).joinToString(separator = "/")
-    context.createDirectories(path.parent!!)
+    val path = toPath(protoType).joinToString(separator = "/").toPath()
     context.write(path, markdown)
     return path
   }

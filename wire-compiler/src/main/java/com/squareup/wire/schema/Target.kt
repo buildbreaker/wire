@@ -29,6 +29,7 @@ import okio.Path
 import java.io.IOException
 import java.io.Serializable
 import io.outfoxx.swiftpoet.FileSpec as SwiftFileSpec
+import okio.Path.Companion.toPath
 
 sealed class Target : Serializable {
   /**
@@ -123,9 +124,6 @@ data class JavaTarget(
           .withCompact(compact)
           .withOptions(emitDeclaredOptions, emitAppliedOptions)
           .withBuildersOnly(buildersOnly)
-
-        context.createDirectories(context.outDirectory)
-
         super.handle(schema, context)
       }
 
@@ -155,27 +153,23 @@ data class JavaTarget(
         location: Location,
         context: SchemaContext,
       ): Path {
-        val outDirectory = context.outDirectory
         val javaFile = JavaFile.builder(javaTypeName.packageName(), typeSpec)
           .addFileComment("\$L", WireCompiler.CODE_GENERATED_BY_WIRE)
           .addFileComment("\nSource: \$L in \$L", source, location.withPathOnly())
           .build()
-        val filePath = outDirectory /
-          javaFile.packageName.replace(".", "/") /
+        val filePath = javaFile.packageName.replace(".", "/").toPath() /
           "${javaTypeName.simpleName()}.java"
 
-        context.logger.artifactHandled(
-          outDirectory, "${javaFile.packageName}.${javaFile.typeSpec.name}", "Java"
+        context.artifactHandled(
+          "${javaFile.packageName}.${javaFile.typeSpec.name}", "Java"
         )
-        try {
-          context.createDirectories(filePath.parent!!)
+        return try {
           context.write(filePath, javaFile.toString())
         } catch (e: IOException) {
           throw IOException(
-            "Error emitting ${javaFile.packageName}.${javaFile.typeSpec.name} to $outDirectory", e
+            "Error emitting ${javaFile.packageName}.${javaFile.typeSpec.name} to ${outDirectory.toPath()}", e
           )
         }
-        return filePath
       }
     }
   }
@@ -269,7 +263,6 @@ data class KotlinTarget(
           buildersOnly = buildersOnly,
           singleMethodServices = singleMethodServices,
         )
-        context.createDirectories(context.outDirectory)
         super.handle(schema, context)
       }
 
@@ -325,26 +318,22 @@ data class KotlinTarget(
         location: Location,
         context: SchemaContext,
       ): Path {
-        val modulePath = context.outDirectory
         val kotlinFile = FileSpec.builder(name.packageName, name.simpleName)
           .addFileComment(WireCompiler.CODE_GENERATED_BY_WIRE)
           .addFileComment("\nSource: %L in %L", source, location.withPathOnly())
           .addType(typeSpec)
           .build()
-        val filePath = modulePath /
-          kotlinFile.packageName.replace(".", "/") /
+        val filePath = kotlinFile.packageName.replace(".", "/").toPath() /
           "${kotlinFile.name}.kt"
-        context.logger.artifactHandled(
-          modulePath, "${kotlinFile.packageName}.${(kotlinFile.members.first() as TypeSpec).name}",
+        context.artifactHandled(
+          "${kotlinFile.packageName}.${(kotlinFile.members.first() as TypeSpec).name}",
           "Kotlin"
         )
-        try {
-          context.createDirectories(filePath.parent!!)
+        return try {
           context.write(filePath, kotlinFile.toString())
         } catch (e: IOException) {
-          throw IOException("Error emitting ${kotlinFile.packageName}.$source to $outDirectory", e)
+          throw IOException("Error emitting ${kotlinFile.packageName}.$source to ${outDirectory.toPath()}", e)
         }
-        return filePath
       }
     }
   }
@@ -377,14 +366,12 @@ data class SwiftTarget(
 
       override fun handle(schema: Schema, context: SchemaContext) {
         generator = SwiftGenerator(schema, context.module?.upstreamTypes ?: mapOf())
-        context.createDirectories(context.outDirectory)
         super.handle(schema, context)
       }
 
       override fun handle(type: Type, context: SchemaContext): Path? {
         if (SwiftGenerator.builtInType(type.type)) return null
 
-        val modulePath = context.outDirectory
         val typeName = generator.generatedTypeName(type)
         val swiftFile = SwiftFileSpec.builder(typeName.moduleName, typeName.simpleName)
           .addComment(WireCompiler.CODE_GENERATED_BY_WIRE)
@@ -395,19 +382,17 @@ data class SwiftTarget(
           }
           .build()
 
-        val filePath = modulePath / "${swiftFile.name}.swift"
-        try {
+        val filePath = "${swiftFile.name}.swift".toPath()
+        context.artifactHandled(
+          "${swiftFile.moduleName}.${typeName.canonicalName}", "Swift"
+        )
+        return try {
           context.write(filePath, swiftFile.toString())
         } catch (e: IOException) {
           throw IOException(
-            "Error emitting ${swiftFile.moduleName}.${typeName.canonicalName} to $modulePath", e
+            "Error emitting ${swiftFile.moduleName}.${typeName.canonicalName} to $filePath", e
           )
         }
-
-        context.logger.artifactHandled(
-          modulePath, "${swiftFile.moduleName}.${typeName.canonicalName}", "Swift"
-        )
-        return filePath
       }
 
       override fun handle(service: Service, context: SchemaContext) = emptyList<Path>()
@@ -444,23 +429,17 @@ data class ProtoTarget(
   override fun newHandler(): SchemaHandler {
     return object : SchemaHandler() {
       override fun handle(schema: Schema, context: SchemaContext) {
-        context.createDirectories(context.outDirectory)
-        val outDirectory = context.outDirectory
-
         for (protoFile in schema.protoFiles) {
           if (!context.inSourcePath(protoFile) || protoFile.isEmpty()) continue
 
           val relativePath = protoFile.location.path
-            .substringBeforeLast("/", missingDelimiterValue = ".")
-          val outputDirectory = outDirectory / relativePath
-          val outputFilePath = outputDirectory / "${protoFile.name()}.proto"
-          context.logger.artifactHandled(outputDirectory, protoFile.location.path, "Proto")
-
+            .substringBeforeLast("/", missingDelimiterValue = ".").toPath()
+          val outputFilePath = relativePath / "${protoFile.name()}.proto"
+          context.artifactHandled(protoFile.location.path, "Proto")
           try {
-            context.createDirectories(outputFilePath.parent!!)
             context.write(outputFilePath, protoFile.toSchema())
           } catch (e: IOException) {
-            throw IOException("Error emitting $outputFilePath to $outDirectory", e)
+            throw IOException("Error emitting $outputFilePath to ${outDirectory.toPath()}", e)
           }
         }
       }

@@ -23,6 +23,7 @@ import com.squareup.wire.schema.SchemaHandler
 import com.squareup.wire.schema.Service
 import com.squareup.wire.schema.Type
 import okio.Path
+import okio.Path.Companion.toPath
 
 /** Sample schema handler which generate Markdown files for types and services. */
 class MarkdownHandler : SchemaHandler() {
@@ -43,8 +44,7 @@ class MarkdownHandler : SchemaHandler() {
     markdown: String,
     context: SchemaContext
   ): Path {
-    val path = context.outDirectory / toPath(protoType).joinToString(separator = "/")
-    context.createDirectories(path.parent!!)
+    val path = toPath(protoType).joinToString(separator = "/").toPath()
     context.write(path, markdown)
     return path
   }
