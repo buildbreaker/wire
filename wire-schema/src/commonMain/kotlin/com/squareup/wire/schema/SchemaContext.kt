@@ -78,6 +78,7 @@ interface SchemaContext {
    * As a side effect, this will create the destination directory.
    * @param file is the file path to use to write to.
    * @param str is the content of the file.
+   * @return the path of the created file.
    */
   fun write(file: Path, str: String): Path
 }
