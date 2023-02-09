@@ -27,7 +27,7 @@ import okio.Path.Companion.toPath
 class LogToWireLoggerHandler : SchemaHandler() {
   override fun handle(type: Type, context: Context): Path? {
     context.logger.artifactHandled(
-      "/".toPath(), type.type.enclosingTypeOrPackage ?: "", type.type.simpleName
+      "".toPath(), type.type.enclosingTypeOrPackage ?: "", type.type.simpleName
     )
 
     return null
@@ -35,7 +35,7 @@ class LogToWireLoggerHandler : SchemaHandler() {
 
   override fun handle(service: Service, context: Context): List<Path> {
     context.logger.artifactHandled(
-      "/".toPath(), service.type.enclosingTypeOrPackage ?: "", service.type.simpleName
+      "".toPath(), service.type.enclosingTypeOrPackage ?: "", service.type.simpleName
     )
 
     return listOf()
