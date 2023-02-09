@@ -114,7 +114,7 @@ data class JavaTarget(
     return object : SchemaHandler() {
       private lateinit var javaGenerator: JavaGenerator
 
-      override fun handle(schema: Schema, context: SchemaContext) {
+      override fun handle(schema: Schema, context: SchemaHandler.Context) {
         val profileName = if (android) "android" else "java"
         val profile = context.profileLoader!!.loadProfile(profileName, schema)
         javaGenerator = JavaGenerator.get(schema)
@@ -127,7 +127,7 @@ data class JavaTarget(
         super.handle(schema, context)
       }
 
-      override fun handle(type: Type, context: SchemaContext): Path? {
+      override fun handle(type: Type, context: SchemaHandler.Context): Path? {
         if (JavaGenerator.builtInType(type.type)) return null
 
         val typeSpec = javaGenerator.generateType(type)
@@ -135,12 +135,12 @@ data class JavaTarget(
         return write(javaTypeName, typeSpec, type.type, type.location, context)
       }
 
-      override fun handle(service: Service, context: SchemaContext): List<Path> {
+      override fun handle(service: Service, context: SchemaHandler.Context): List<Path> {
         // Service handling isn't supporting in Java.
         return emptyList()
       }
 
-      override fun handle(extend: Extend, field: Field, context: SchemaContext): Path? {
+      override fun handle(extend: Extend, field: Field, context: SchemaHandler.Context): Path? {
         val typeSpec = javaGenerator.generateOptionType(extend, field) ?: return null
         val javaTypeName = javaGenerator.generatedTypeName(extend.member(field))
         return write(javaTypeName, typeSpec, field.qualifiedName, field.location, context)
@@ -151,7 +151,7 @@ data class JavaTarget(
         typeSpec: com.squareup.javapoet.TypeSpec,
         source: Any,
         location: Location,
-        context: SchemaContext,
+        context: SchemaHandler.Context,
       ): Path {
         val javaFile = JavaFile.builder(javaTypeName.packageName(), typeSpec)
           .addFileComment("\$L", WireCompiler.CODE_GENERATED_BY_WIRE)
@@ -160,11 +160,11 @@ data class JavaTarget(
         val filePath = javaFile.packageName.replace(".", "/").toPath() /
           "${javaTypeName.simpleName()}.java"
 
-        context.logArtifactHandled(
+        context.fileWriter.logArtifactHandled(
           "${javaFile.packageName}.${javaFile.typeSpec.name}", "Java"
         )
         return try {
-          context.write(filePath, javaFile.toString())
+          context.fileWriter.write(filePath, javaFile.toString())
         } catch (e: IOException) {
           throw IOException(
             "Error emitting ${javaFile.packageName}.${javaFile.typeSpec.name} to ${outDirectory.toPath()}", e
@@ -245,7 +245,7 @@ data class KotlinTarget(
     return object : SchemaHandler() {
       private lateinit var kotlinGenerator: KotlinGenerator
 
-      override fun handle(schema: Schema, context: SchemaContext) {
+      override fun handle(schema: Schema, context: SchemaHandler.Context) {
         val profileName = if (android) "android" else "java"
         val profile = context.profileLoader!!.loadProfile(profileName, schema)
         kotlinGenerator = KotlinGenerator(
@@ -266,7 +266,7 @@ data class KotlinTarget(
         super.handle(schema, context)
       }
 
-      override fun handle(type: Type, context: SchemaContext): Path? {
+      override fun handle(type: Type, context: SchemaHandler.Context): Path? {
         if (KotlinGenerator.builtInType(type.type)) return null
 
         val typeSpec = kotlinGenerator.generateType(type)
@@ -274,7 +274,7 @@ data class KotlinTarget(
         return write(className, typeSpec, type.type, type.location, context)
       }
 
-      override fun handle(service: Service, context: SchemaContext): List<Path> {
+      override fun handle(service: Service, context: SchemaHandler.Context): List<Path> {
         if (rpcRole === RpcRole.NONE) return emptyList()
 
         val generatedPaths = mutableListOf<Path>()
@@ -305,7 +305,7 @@ data class KotlinTarget(
         return generatedPaths
       }
 
-      override fun handle(extend: Extend, field: Field, context: SchemaContext): Path? {
+      override fun handle(extend: Extend, field: Field, context: SchemaHandler.Context): Path? {
         val typeSpec = kotlinGenerator.generateOptionType(extend, field) ?: return null
         val name = kotlinGenerator.generatedTypeName(extend.member(field))
         return write(name, typeSpec, field.qualifiedName, field.location, context)
@@ -316,7 +316,7 @@ data class KotlinTarget(
         typeSpec: TypeSpec,
         source: Any,
         location: Location,
-        context: SchemaContext,
+        context: SchemaHandler.Context,
       ): Path {
         val kotlinFile = FileSpec.builder(name.packageName, name.simpleName)
           .addFileComment(WireCompiler.CODE_GENERATED_BY_WIRE)
@@ -325,12 +325,12 @@ data class KotlinTarget(
           .build()
         val filePath = kotlinFile.packageName.replace(".", "/").toPath() /
           "${kotlinFile.name}.kt"
-        context.logArtifactHandled(
+        context.fileWriter.logArtifactHandled(
           "${kotlinFile.packageName}.${(kotlinFile.members.first() as TypeSpec).name}",
           "Kotlin"
         )
         return try {
-          context.write(filePath, kotlinFile.toString())
+          context.fileWriter.write(filePath, kotlinFile.toString())
         } catch (e: IOException) {
           throw IOException("Error emitting ${kotlinFile.packageName}.$source to ${outDirectory.toPath()}", e)
         }
@@ -364,12 +364,12 @@ data class SwiftTarget(
     return object : SchemaHandler() {
       private lateinit var generator: SwiftGenerator
 
-      override fun handle(schema: Schema, context: SchemaContext) {
+      override fun handle(schema: Schema, context: SchemaHandler.Context) {
         generator = SwiftGenerator(schema, context.module?.upstreamTypes ?: mapOf())
         super.handle(schema, context)
       }
 
-      override fun handle(type: Type, context: SchemaContext): Path? {
+      override fun handle(type: Type, context: SchemaHandler.Context): Path? {
         if (SwiftGenerator.builtInType(type.type)) return null
 
         val typeName = generator.generatedTypeName(type)
@@ -383,11 +383,11 @@ data class SwiftTarget(
           .build()
 
         val filePath = "${swiftFile.name}.swift".toPath()
-        context.logArtifactHandled(
+        context.fileWriter.logArtifactHandled(
           "${swiftFile.moduleName}.${typeName.canonicalName}", "Swift"
         )
         return try {
-          context.write(filePath, swiftFile.toString())
+          context.fileWriter.write(filePath, swiftFile.toString())
         } catch (e: IOException) {
           throw IOException(
             "Error emitting ${swiftFile.moduleName}.${typeName.canonicalName} to $filePath", e
@@ -395,11 +395,11 @@ data class SwiftTarget(
         }
       }
 
-      override fun handle(service: Service, context: SchemaContext) = emptyList<Path>()
+      override fun handle(service: Service, context: SchemaHandler.Context) = emptyList<Path>()
       override fun handle(
         extend: Extend,
         field: Field,
-        context: SchemaContext
+        context: SchemaHandler.Context
       ): Path? = null
     }
   }
@@ -428,16 +428,16 @@ data class ProtoTarget(
 
   override fun newHandler(): SchemaHandler {
     return object : SchemaHandler() {
-      override fun handle(schema: Schema, context: SchemaContext) {
+      override fun handle(schema: Schema, context: SchemaHandler.Context) {
         for (protoFile in schema.protoFiles) {
           if (!context.inSourcePath(protoFile) || protoFile.isEmpty()) continue
 
           val relativePath = protoFile.location.path
             .substringBeforeLast("/", missingDelimiterValue = ".").toPath()
           val outputFilePath = relativePath / "${protoFile.name()}.proto"
-          context.logArtifactHandled(protoFile.location.path, "Proto")
+          context.fileWriter.logArtifactHandled(protoFile.location.path, "Proto")
           try {
-            context.write(outputFilePath, protoFile.toSchema())
+            context.fileWriter.write(outputFilePath, protoFile.toSchema())
           } catch (e: IOException) {
             throw IOException("Error emitting $outputFilePath to ${outDirectory.toPath()}", e)
           }
@@ -446,11 +446,11 @@ data class ProtoTarget(
 
       private fun ProtoFile.isEmpty() = types.isEmpty() && services.isEmpty() && extendList.isEmpty()
 
-      override fun handle(type: Type, context: SchemaContext): Path? = null
+      override fun handle(type: Type, context: SchemaHandler.Context): Path? = null
 
-      override fun handle(service: Service, context: SchemaContext): List<Path> = listOf()
+      override fun handle(service: Service, context: SchemaHandler.Context): List<Path> = listOf()
 
-      override fun handle(extend: Extend, field: Field, context: SchemaContext): Path? = null
+      override fun handle(extend: Extend, field: Field, context: SchemaHandler.Context): Path? = null
     }
   }
 

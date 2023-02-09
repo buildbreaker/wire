@@ -19,6 +19,7 @@ package com.squareup.wire.recipes
 
 import com.squareup.wire.WireTestLogger
 import com.squareup.wire.buildSchema
+import com.squareup.wire.schema.FileSystemWriter
 import com.squareup.wire.schema.SchemaHandler
 import okio.Path.Companion.toPath
 import okio.fakefilesystem.FakeFileSystem
@@ -57,10 +58,12 @@ class LogToWireLoggerHandlerTest {
       )
     }
     val logger = WireTestLogger()
-    val context = SchemaHandler.FileSystemContext(
-      fileSystem = FakeFileSystem(),
-      outDirectory = "out".toPath(),
-      logger = logger,
+    val context = SchemaHandler.Context(
+      fileWriter = FileSystemWriter(
+        fileSystem = FakeFileSystem(),
+        outDirectory = "out".toPath(),
+        logger = logger,
+      ),
       sourcePathPaths = setOf("test/message.proto", "test/service.proto"),
     )
     LogToWireLoggerHandler().handle(schema, context)

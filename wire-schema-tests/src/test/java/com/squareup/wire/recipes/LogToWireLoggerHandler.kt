@@ -17,7 +17,6 @@ package com.squareup.wire.recipes
 
 import com.squareup.wire.schema.Extend
 import com.squareup.wire.schema.Field
-import com.squareup.wire.schema.SchemaContext
 import com.squareup.wire.schema.SchemaHandler
 import com.squareup.wire.schema.Service
 import com.squareup.wire.schema.Type
@@ -25,23 +24,23 @@ import okio.Path
 
 /** Sample schema handler which logs handled types and services. */
 class LogToWireLoggerHandler : SchemaHandler() {
-  override fun handle(type: Type, context: SchemaContext): Path? {
-    context.logArtifactHandled(
+  override fun handle(type: Type, context: Context): Path? {
+    context.fileWriter.logArtifactHandled(
       type.type.enclosingTypeOrPackage ?: "", type.type.simpleName
     )
 
     return null
   }
 
-  override fun handle(service: Service, context: SchemaContext): List<Path> {
-    context.logArtifactHandled(
+  override fun handle(service: Service, context: Context): List<Path> {
+    context.fileWriter.logArtifactHandled(
       service.type.enclosingTypeOrPackage ?: "", service.type.simpleName
     )
 
     return listOf()
   }
 
-  override fun handle(extend: Extend, field: Field, context: SchemaContext): Path? {
+  override fun handle(extend: Extend, field: Field, context: Context): Path? {
     return null
   }
 }

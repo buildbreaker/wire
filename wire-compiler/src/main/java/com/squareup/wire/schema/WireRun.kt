@@ -259,10 +259,12 @@ data class WireRun(
           } else {
             target.outDirectory.toPath() / moduleName
           }
-        val context = SchemaHandler.FileSystemContext(
-          fileSystem = fs,
-          outDirectory = outDirectory,
-          logger = logger,
+        val context = SchemaHandler.Context(
+          fileWriter = FileSystemWriter(
+            fs,
+            outDirectory,
+            logger = logger,
+          ),
           errorCollector = errorCollector,
           emittingRules = targetToEmittingRules.getValue(target),
           claimedDefinitions = if (target.exclusive) claimedDefinitions else null,
