@@ -18,6 +18,23 @@ package com.squareup.wire.schema
 import okio.Path
 
 interface FileWriter {
+  /**
+   * Write contents to the file.
+   *
+   * @param file the file.
+   * @param content the contents.
+   *
+   * @return the Path of the written file.
+   */
   fun write(file: Path, content: String): Path
+
+  /**
+   * Log that particular artifact is handled by a handler.
+   * For more details see:
+   * {@see com.squareup.wire.WireLogger#artifactHandled() artifactHandled }
+   *
+   * @param qualifiedName the qualified name of the artifact.
+   * @param targetName the name of the target.
+   */
   fun logArtifactHandled(qualifiedName: String, targetName: String)
 }
