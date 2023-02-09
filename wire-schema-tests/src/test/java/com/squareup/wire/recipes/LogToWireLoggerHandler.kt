@@ -35,7 +35,7 @@ class LogToWireLoggerHandler : SchemaHandler() {
 
   override fun handle(service: Service, context: Context): List<Path> {
     context.logger.artifactHandled(
-      "".toPath(), service.type.enclosingTypeOrPackage ?: "", service.type.simpleName
+      "/".toPath(), service.type.enclosingTypeOrPackage ?: "", service.type.simpleName
     )
 
     return listOf()
