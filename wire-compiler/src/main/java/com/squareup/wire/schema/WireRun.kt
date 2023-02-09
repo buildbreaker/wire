@@ -273,6 +273,8 @@ data class WireRun(
           module = module,
           profileLoader = schemaLoader,
         )
+        // Ensure the out directory is created.
+        fs.createDirectories(outDirectory)
         handler.handle(partition.schema, context)
       }
     }

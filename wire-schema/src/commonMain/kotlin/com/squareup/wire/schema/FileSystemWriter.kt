@@ -28,10 +28,6 @@ class FileSystemWriter(
   private val logger: WireLogger,
 ): FileWriter {
 
-  init {
-    fileSystem.createDirectories(outDirectory)
-  }
-
   override fun write(file: Path, content: String): Path {
     val output = outDirectory / file
     fileSystem.createDirectories(outDirectory / file.parent!!)
