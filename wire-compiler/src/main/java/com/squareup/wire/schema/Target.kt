@@ -391,7 +391,7 @@ data class SwiftTarget(
           context.fileWriter.write(filePath, swiftFile.toString())
         } catch (e: IOException) {
           throw IOException(
-            "Error emitting ${swiftFile.moduleName}.${typeName.canonicalName} to $filePath", e
+            "Error emitting ${swiftFile.moduleName}.${typeName.canonicalName} to ${outDirectory.toPath()}", e
           )
         }
       }
