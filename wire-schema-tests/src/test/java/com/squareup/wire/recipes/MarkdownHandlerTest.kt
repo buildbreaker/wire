@@ -76,8 +76,8 @@ class MarkdownHandlerTest {
       fileWriter = FileSystemWriter(
         fileSystem = fileSystem,
         outDirectory = "generated/markdown".toPath(),
-        logger = WireTestLogger(),
       ),
+      logger = WireTestLogger(),
       sourcePathPaths = setOf("squareup/colors/red.proto", "squareup/colors/blue.proto"),
     )
     MarkdownHandler().handle(schema, context)

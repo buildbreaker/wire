@@ -59,8 +59,8 @@ class ErrorReportingSchemaHandlerTest {
       fileWriter = FileSystemWriter(
         fileSystem = FakeFileSystem(),
         outDirectory = "out".toPath(),
-        logger = WireTestLogger(),
       ),
+      logger = WireTestLogger(),
       errorCollector = errorCollector,
     )
 

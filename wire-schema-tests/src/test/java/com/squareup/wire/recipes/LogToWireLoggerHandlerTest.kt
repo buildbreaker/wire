@@ -62,8 +62,8 @@ class LogToWireLoggerHandlerTest {
       fileWriter = FileSystemWriter(
         fileSystem = FakeFileSystem(),
         outDirectory = "out".toPath(),
-        logger = logger,
       ),
+      logger = logger,
       sourcePathPaths = setOf("test/message.proto", "test/service.proto"),
     )
     LogToWireLoggerHandler().handle(schema, context)

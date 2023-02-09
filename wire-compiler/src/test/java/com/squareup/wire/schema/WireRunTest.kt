@@ -657,8 +657,8 @@ class WireRunTest {
         fileWriter = FileSystemWriter(
           fileSystem = fs,
           outDirectory = "out".toPath(),
-          logger = NULL_LOGGER,
         ),
+        logger = NULL_LOGGER,
         errorCollector = errorCollector,
         claimedPaths = ClaimedPaths(),
       )

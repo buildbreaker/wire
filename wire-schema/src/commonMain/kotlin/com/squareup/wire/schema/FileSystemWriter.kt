@@ -15,17 +15,14 @@
  */
 package com.squareup.wire.schema
 
-import com.squareup.wire.WireLogger
 import okio.FileSystem
 import okio.Path
 
-class FileSystemWriter(
+class FileSystemWriter constructor(
   /** To be used by the [SchemaHandler] for reading/writing operations on disk. */
   private val fileSystem: FileSystem,
   /** Location on [fileSystem] where the [SchemaHandler] is to write files, if it needs to. */
   private val outDirectory: Path,
-  /** Event-listener like logger with which [SchemaHandler] can notify handled artifacts. */
-  private val logger: WireLogger,
 ): FileWriter {
 
   override fun write(file: Path, content: String): Path {
@@ -35,9 +32,5 @@ class FileSystemWriter(
       writeUtf8(content)
     }
     return output
-  }
-
-  override fun logArtifactHandled(qualifiedName: String, targetName: String) {
-    logger.artifactHandled(outDirectory, qualifiedName, targetName)
   }
 }

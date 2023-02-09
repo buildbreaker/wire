@@ -263,8 +263,8 @@ data class WireRun(
           fileWriter = FileSystemWriter(
             fs,
             outDirectory,
-            logger = logger,
           ),
+          logger = logger,
           errorCollector = errorCollector,
           emittingRules = targetToEmittingRules.getValue(target),
           claimedDefinitions = if (target.exclusive) claimedDefinitions else null,

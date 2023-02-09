@@ -15,6 +15,7 @@
  */
 package com.squareup.wire.schema
 
+import com.squareup.wire.WireLogger
 import com.squareup.wire.internal.Serializable
 import okio.Path
 
@@ -64,7 +65,10 @@ abstract class SchemaHandler {
    * both helping objects such as [logger], and constraining objects such as [emittingRules].
    */
   data class Context constructor(
+    /** File writer which the [SchemaHandler] will use to write generated files. **/
     val fileWriter: FileWriter,
+    /** Event-listener like logger with which [SchemaHandler] can notify handled artifacts. */
+    val logger: WireLogger,
     /**
      * Object to be used by the [SchemaHandler] to store errors. After all [SchemaHandler]s are
      * finished, Wire will throw an exception if any error are present inside the collector.

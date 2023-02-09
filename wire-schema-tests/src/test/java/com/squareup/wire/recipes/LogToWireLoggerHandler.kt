@@ -21,20 +21,21 @@ import com.squareup.wire.schema.SchemaHandler
 import com.squareup.wire.schema.Service
 import com.squareup.wire.schema.Type
 import okio.Path
+import okio.Path.Companion.toPath
 
 /** Sample schema handler which logs handled types and services. */
 class LogToWireLoggerHandler : SchemaHandler() {
   override fun handle(type: Type, context: Context): Path? {
-    context.fileWriter.logArtifactHandled(
-      type.type.enclosingTypeOrPackage ?: "", type.type.simpleName
+    context.logger.artifactHandled(
+      "/".toPath(), type.type.enclosingTypeOrPackage ?: "", type.type.simpleName
     )
 
     return null
   }
 
   override fun handle(service: Service, context: Context): List<Path> {
-    context.fileWriter.logArtifactHandled(
-      service.type.enclosingTypeOrPackage ?: "", service.type.simpleName
+    context.logger.artifactHandled(
+      "".toPath(), service.type.enclosingTypeOrPackage ?: "", service.type.simpleName
     )
 
     return listOf()
