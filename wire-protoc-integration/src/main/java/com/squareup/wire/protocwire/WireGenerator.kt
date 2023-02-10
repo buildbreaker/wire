@@ -40,12 +40,8 @@ import com.squareup.wire.schema.internal.parser.ServiceElement
 import com.squareup.wire.schema.internal.parser.TypeElement
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
-import okio.Buffer
-import okio.ForwardingFileSystem
 import okio.Path
 import okio.Path.Companion.toPath
-import okio.Sink
-import okio.Timeout
 
 class WireGenerator(
   private val schemaHandler: SchemaHandler
@@ -100,7 +96,7 @@ class WireGenerator(
     try {
       val schema = linker.link(protoFiles)
       val context = SchemaHandler.Context(
-        fileSystem = FileSystem(response),
+        fileSystem = ProtocFileSystem(response),
         outDirectory = "".toPath(),
         errorCollector = errorCollector,
         sourcePathPaths = sourcePaths,
@@ -115,44 +111,6 @@ class WireGenerator(
       val formatter = DateTimeFormatter.ofPattern("HH:mm:ss")
       val formatted = current.format(formatter)
       response.addFile("$formatted-error.log", e.stackTraceToString())
-    }
-  }
-}
-
-private class FileSystem(private val response: Plugin.Response): ForwardingFileSystem(SYSTEM) {
-  /**
-   * Returns a single sink per file from protoc.
-   *
-   * It isn't guaranteed that flush() is called prior to close().
-   * The behavior intends to address this issue by calling flush()
-   * on close() if it hasn't been called yet. The flush() method
-   * is the canonical way to write to file.
-   */
-  override fun sink(file: Path, mustCreate: Boolean): Sink {
-    return object: Sink {
-      private val buffer = Buffer()
-      private var isFlushed = false
-
-      override fun close() {
-        flush()
-        buffer.close()
-      }
-
-      override fun flush() {
-        if (isFlushed) {
-          return
-        }
-        isFlushed = true
-        response.addFile(file.toString(), buffer.readUtf8())
-      }
-
-      override fun timeout(): Timeout {
-        return Timeout()
-      }
-
-      override fun write(source: Buffer, byteCount: Long) {
-        source.read(buffer, byteCount)
-      }
     }
   }
 }
@@ -638,7 +596,7 @@ private class SourceCodeHelper(
   private fun toLocationAndComments(location: SourceCodeInfo.Location?): LocationAndComments {
     val loc = if (location == null) baseLoc else baseLoc.at(location.getSpan(0) + 1, location.getSpan(1) + 1)
     var comment = location?.leadingComments
-    if ((comment ?: "") == "") {
+    if (comment.isNullOrBlank()) {
       comment = location?.trailingComments
     }
     return LocationAndComments(comment ?: "", loc)
