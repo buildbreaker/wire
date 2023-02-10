@@ -119,7 +119,7 @@ class WireGenerator(
   }
 }
 
-class FileSystem(private val response: Plugin.Response): ForwardingFileSystem(SYSTEM) {
+private class FileSystem(private val response: Plugin.Response): ForwardingFileSystem(SYSTEM) {
   /**
    * Returns a single sink per file from protoc.
    *
@@ -505,7 +505,7 @@ private fun parseType(field: FieldDescriptorProto): String {
     FieldDescriptorProto.Type.TYPE_MESSAGE -> {
       field.typeName
     }
-    // TODO: Figure out group types
+    // TODO: Group types are unsupported.
     FieldDescriptorProto.Type.TYPE_GROUP -> ""
     else -> throw RuntimeException("else case found for ${field.type}")
   }
