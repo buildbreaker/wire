@@ -43,7 +43,7 @@ tasks {
     from(contents)
   }
   build {
-    dependsOn(kotlinGeneratorBinary, javaGeneratorBinary, stub)
+    dependsOn(kotlinGeneratorBinary, javaGeneratorBinary)
   }
 }
 

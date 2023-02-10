@@ -173,31 +173,31 @@ private fun parseFileDescriptor(
       imports.add(dependencyFile)
     }
   }
-
   val syntax = if (fileDescriptor.hasSyntax()) Syntax[fileDescriptor.syntax] else Syntax.PROTO_2
   val types = mutableListOf<TypeElement>()
   val baseSourceInfo = SourceInfo(fileDescriptor, descs)
+  // Parse messages.
   for ((sourceInfo, messageType) in fileDescriptor.messageTypeList.withSourceInfo(
     baseSourceInfo,
     FileDescriptorProto.MESSAGE_TYPE_FIELD_NUMBER
   )) {
     types.add(parseMessage(sourceInfo, packagePrefix, messageType, syntax))
   }
+  // Parse enums.
   for ((sourceInfo, enumType) in fileDescriptor.enumTypeList.withSourceInfo(
     baseSourceInfo,
     FileDescriptorProto.ENUM_TYPE_FIELD_NUMBER
   )) {
     types.add(parseEnum(sourceInfo, enumType))
   }
-
   val services = mutableListOf<ServiceElement>()
+  // Parse services.
   for ((sourceInfo, service) in fileDescriptor.serviceList.withSourceInfo(
     baseSourceInfo,
     FileDescriptorProto.SERVICE_FIELD_NUMBER
   )) {
     services.add(parseService(sourceInfo, service))
   }
-
   val extElementList = parseFields(
     baseSourceInfo,
     FileDescriptorProto.EXTENSION_FIELD_NUMBER,
@@ -206,8 +206,8 @@ private fun parseFileDescriptor(
     baseSourceInfo.descriptorSource,
     syntax
   )
-  val zippedExts =
-    fileDescriptor.extensionList.zip(extElementList) { descriptorProto, fieldElement -> descriptorProto to fieldElement }
+  val zippedExts = fileDescriptor.extensionList
+    .zip(extElementList) { descriptorProto, fieldElement -> descriptorProto to fieldElement }
   val extendsList = indexFieldsByExtendee(baseSourceInfo, FileDescriptorProto.EXTENSION_FIELD_NUMBER, zippedExts)
 
   return ProtoFileElement(
@@ -346,8 +346,8 @@ private fun parseMessage(
     baseSourceInfo.descriptorSource,
     syntax
   )
-  val zippedFields =
-    message.fieldList.zip(fieldElementList) { descriptorProto, fieldElement -> descriptorProto to fieldElement }
+  val zippedFields = message.fieldList
+    .zip(fieldElementList) { descriptorProto, fieldElement -> descriptorProto to fieldElement }
   val oneOfIndexToFields = indexFieldsByOneOf(zippedFields)
   val fields = zippedFields.filter { pair -> !pair.first.hasOneofIndex() }.map { pair -> pair.second }
 
@@ -359,8 +359,8 @@ private fun parseMessage(
     baseSourceInfo.descriptorSource,
     syntax
   )
-  val zippedExts =
-    message.extensionList.zip(extElementList) { descriptorProto, fieldElement -> descriptorProto to fieldElement }
+  val zippedExts = message.extensionList
+    .zip(extElementList) { descriptorProto, fieldElement -> descriptorProto to fieldElement }
   val extendsList = indexFieldsByExtendee(baseSourceInfo, DescriptorProto.EXTENSION_FIELD_NUMBER, zippedExts)
 
   return MessageElement(
@@ -521,7 +521,6 @@ private fun parseLabel(field: FieldDescriptorProto, syntax: Syntax): Field.Label
         syntax == Syntax.PROTO_3 && !field.hasExtendee() && !field.proto3Optional -> null
         else -> Field.Label.OPTIONAL
       }
-
     else -> null
   }
 }
@@ -563,19 +562,19 @@ private fun valueOf(value: Any): OptionValueAndKind {
 }
 
 private fun toCharArray(bytes: ByteArray): CharArray {
-  val ch = CharArray(bytes.size)
-  bytes.forEachIndexed { index, element -> ch[index] = element.toInt().toChar() }
-  return ch
+  val chars = CharArray(bytes.size)
+  bytes.forEachIndexed { index, element -> chars[index] = element.toInt().toChar() }
+  return chars
 }
 
-private fun simpleValue(optVal: OptionValueAndKind): Any {
-  return if (optVal.kind == OptionElement.Kind.BOOLEAN ||
-    optVal.kind == OptionElement.Kind.ENUM ||
-    optVal.kind == OptionElement.Kind.NUMBER
+private fun simpleValue(optionValueAndKind: OptionValueAndKind): Any {
+  return if (optionValueAndKind.kind == OptionElement.Kind.BOOLEAN ||
+    optionValueAndKind.kind == OptionElement.Kind.ENUM ||
+    optionValueAndKind.kind == OptionElement.Kind.NUMBER
   ) {
-    OptionElement.OptionPrimitive(optVal.kind, optVal.value)
+    OptionElement.OptionPrimitive(optionValueAndKind.kind, optionValueAndKind.value)
   } else {
-    optVal.value
+    optionValueAndKind.value
   }
 }
 
@@ -590,14 +589,14 @@ private fun valueOfList(list: List<*>): List<Any> {
   return ret
 }
 
-private fun valueOfMessage(msg: AbstractMessage): Map<String, Any> {
-  val ret = mutableMapOf<String, Any>()
-  for (entry in msg.allFields.entries) {
-    val fld = entry.key
-    val name = if (fld.isExtension) "[${fld.fullName}]" else fld.name
-    ret[name] = simpleValue(valueOf(entry.value))
+private fun valueOfMessage(abstractMessage: AbstractMessage): Map<String, Any> {
+  val values = mutableMapOf<String, Any>()
+  for (entry in abstractMessage.allFields.entries) {
+    val fieldDescriptor = entry.key
+    val name = if (fieldDescriptor.isExtension) "[${fieldDescriptor.fullName}]" else fieldDescriptor.name
+    values[name] = simpleValue(valueOf(entry.value))
   }
-  return ret
+  return values
 }
 
 private data class OptionValueAndKind(val value: Any, val kind: OptionElement.Kind)
@@ -605,57 +604,57 @@ private data class OptionValueAndKind(val value: Any, val kind: OptionElement.Ki
 private data class LocationAndComments(val comment: String, val loc: Location)
 
 private class SourceCodeHelper(
-  fd: FileDescriptorProto
+  fileDescriptorProto: FileDescriptorProto
 ) {
-  val locs: Map<List<Int>, List<SourceCodeInfo.Location>> = makeLocationMap(fd.sourceCodeInfo.locationList)
-  val baseLoc: Location = Location.get(fd.name)
+  val locations: Map<List<Int>, List<SourceCodeInfo.Location>> = makeLocationMap(fileDescriptorProto.sourceCodeInfo.locationList)
+  val baseLoc: Location = Location.get(fileDescriptorProto.name)
 
   fun getLocation(path: List<Int>): LocationAndComments {
-    val l = locs[path]?.firstOrNull()
-    return toLocationAndComments(l)
-  }
-
-  private fun toLocationAndComments(l: SourceCodeInfo.Location?): LocationAndComments {
-    val loc = if (l == null) baseLoc else baseLoc.at(l.getSpan(0) + 1, l.getSpan(1) + 1)
-    var comment = l?.leadingComments
-    if ((comment ?: "") == "") {
-      comment = l?.trailingComments
-    }
-    return LocationAndComments(comment ?: "", loc)
+    val location = locations[path]?.firstOrNull()
+    return toLocationAndComments(location)
   }
 
   fun findLocationContaining(path: List<Int>, other: Location): LocationAndComments {
-    val matches = locs[path]
+    val matches = locations[path]
     if (!matches.isNullOrEmpty()) {
-      for (loc: SourceCodeInfo.Location in matches) {
-        val startLine = loc.getSpan(0) + 1
-        val startCol = loc.getSpan(1) + 1
-        val endLine = if (loc.spanCount > 3) loc.getSpan(2) + 1 else startLine
-        val endCol = loc.getSpan(if (loc.spanCount > 3) 3 else 2) + 1
+      for (location: SourceCodeInfo.Location in matches) {
+        val startLine = location.getSpan(0) + 1
+        val startCol = location.getSpan(1) + 1
+        val endLine = if (location.spanCount > 3) location.getSpan(2) + 1 else startLine
+        val endCol = location.getSpan(if (location.spanCount > 3) 3 else 2) + 1
         if (
           (startLine < other.line || (startLine == other.line && startCol <= other.column))
           && (endLine > other.line || (endLine == other.line && endCol >= other.column))
         ) {
           // found a location that contains the given one
-          return toLocationAndComments(loc)
+          return toLocationAndComments(location)
         }
       }
     }
-    // no match found
+    // No match found.
     return toLocationAndComments(null)
   }
 
-  private fun makeLocationMap(locs: List<SourceCodeInfo.Location>): Map<List<Int>, List<SourceCodeInfo.Location>> {
-    val m = mutableMapOf<List<Int>, MutableList<SourceCodeInfo.Location>>()
-    for (loc in locs) {
+  private fun toLocationAndComments(location: SourceCodeInfo.Location?): LocationAndComments {
+    val loc = if (location == null) baseLoc else baseLoc.at(location.getSpan(0) + 1, location.getSpan(1) + 1)
+    var comment = location?.leadingComments
+    if ((comment ?: "") == "") {
+      comment = location?.trailingComments
+    }
+    return LocationAndComments(comment ?: "", loc)
+  }
+
+  private fun makeLocationMap(locationList: List<SourceCodeInfo.Location>): Map<List<Int>, List<SourceCodeInfo.Location>> {
+    val locationMap = mutableMapOf<List<Int>, MutableList<SourceCodeInfo.Location>>()
+    for (location in locationList) {
       val path = mutableListOf<Int>()
-      for (pathElem in loc.pathList) {
+      for (pathElem in location.pathList) {
         path.add(pathElem)
       }
-      val locList = m.getOrPut(path) { mutableListOf() }
-      locList.add(loc)
+      val locList = locationMap.getOrPut(path) { mutableListOf() }
+      locList.add(location)
     }
-    return m
+    return locationMap
   }
 }
 
