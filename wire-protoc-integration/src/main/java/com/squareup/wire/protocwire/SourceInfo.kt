@@ -4,10 +4,12 @@ import com.google.protobuf.DescriptorProtos
 import com.squareup.wire.schema.Location
 import com.squareup.wire.schema.internal.parser.OptionElement
 
+internal data class LocationAndComments(val comment: String, val loc: Location)
+
 internal class SourceInfo(
-    val helper: SourceCodeHelper,
-    val descriptorSource: Plugin.DescriptorSource,
-    path: List<Int> = emptyList(),
+  private val helper: SourceCodeHelper,
+  val descriptorSource: Plugin.DescriptorSource,
+  path: List<Int> = emptyList(),
 ) {
   constructor(
       fileDescriptor: DescriptorProtos.FileDescriptorProto,
@@ -15,10 +17,10 @@ internal class SourceInfo(
       path: List<Int> = emptyList()
   ) : this(SourceCodeHelper(fileDescriptor), descriptorSource, path)
 
-  private val path = mutableListOf(*path.toTypedArray())
+  private val path = listOf(*path.toTypedArray())
 
-  fun push(value: Int) {
-    path.add(value)
+  fun push(value: Int): SourceInfo {
+    return SourceInfo(helper, descriptorSource, path.plus(value))
   }
 
   fun info(): LocationAndComments {
@@ -28,27 +30,31 @@ internal class SourceInfo(
   fun infoContaining(loc: Location): LocationAndComments {
     return helper.findLocationContaining(path, loc)
   }
-
-  fun clone(): SourceInfo {
-    return SourceInfo(helper, descriptorSource, listOf(*path.toTypedArray()))
-  }
 }
 
-internal data class OptionValueAndKind(val value: Any, val kind: OptionElement.Kind)
-
-internal data class LocationAndComments(val comment: String, val loc: Location)
-
+/**
+ * Creates an index for the source locations.
+ */
 internal class SourceCodeHelper(
   fileDescriptorProto: DescriptorProtos.FileDescriptorProto
 ) {
-  val locations: Map<List<Int>, List<DescriptorProtos.SourceCodeInfo.Location>> = makeLocationMap(fileDescriptorProto.sourceCodeInfo.locationList)
-  val baseLoc: Location = Location.get(fileDescriptorProto.name)
+  private val locations: Map<List<Int>, List<DescriptorProtos.SourceCodeInfo.Location>> = makeLocationMap(fileDescriptorProto.sourceCodeInfo.locationList)
+  private val baseLoc: Location = Location.get(fileDescriptorProto.name)
 
+  /**
+   * The location of the first span associated with the given path.
+   */
   fun getLocation(path: List<Int>): LocationAndComments {
     val location = locations[path]?.firstOrNull()
     return toLocationAndComments(location)
   }
 
+  /**
+   * Looks through all spans associated with a given path to find the span that
+   * encloses the given location.
+   *
+   * @returns the starting location of the span.
+   */
   fun findLocationContaining(path: List<Int>, other: Location): LocationAndComments {
     val matches = locations[path]
     if (!matches.isNullOrEmpty()) {
@@ -91,4 +97,21 @@ internal class SourceCodeHelper(
     }
     return locationMap
   }
+}
+
+/**
+ * Primarily for associating source information for a specific elements.
+ *
+ * @param parentSourceInfo source information for the parent element.
+ * @param childTag tag of the field in the parent that corresponds with the list of child element.
+ * @return zipped list of source information associated with each element in the list.
+ */
+internal fun <T> List<T>.withSourceInfo(parentSourceInfo: SourceInfo, childTag: Int): List<Pair<SourceInfo, T>> {
+  val baseSource = parentSourceInfo.push(childTag)
+  val result = mutableListOf<Pair<SourceInfo, T>>()
+  for ((index, elem) in withIndex()) {
+    val newSource = baseSource.push(index)
+    result.add(newSource to elem)
+  }
+  return result
 }

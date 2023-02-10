@@ -18,7 +18,6 @@ private const val BUILDERS_ONLY = "buildersOnly"
 /**
  * Translates the protoc options into known options for the
  * KotlinTarget via the gradle plugin KotlinOutput.
- *
  */
 internal class KotlinTargetConfig {
   companion object {

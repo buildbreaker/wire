@@ -13,7 +13,6 @@ private const val BUILDERS_ONLY = "buildersOnly"
 /**
  * Translates the protoc options into known options for the
  * JavaTarget via the gradle plugin JavaOutput.
- *
  */
 internal class JavaTargetConfig {
   companion object {

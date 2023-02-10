@@ -1,6 +1,5 @@
 package com.squareup.wire.protocwire
 
-import com.google.protobuf.AbstractMessage
 import com.google.protobuf.DescriptorProtos
 import com.google.protobuf.DescriptorProtos.DescriptorProto
 import com.google.protobuf.DescriptorProtos.EnumDescriptorProto
@@ -8,9 +7,6 @@ import com.google.protobuf.DescriptorProtos.FieldDescriptorProto
 import com.google.protobuf.DescriptorProtos.FileDescriptorProto
 import com.google.protobuf.DescriptorProtos.MethodDescriptorProto
 import com.google.protobuf.DescriptorProtos.ServiceDescriptorProto
-import com.google.protobuf.Descriptors.EnumValueDescriptor
-import com.google.protobuf.DynamicMessage
-import com.google.protobuf.GeneratedMessageV3.ExtendableMessage
 import com.google.protobuf.compiler.PluginProtos
 import com.squareup.wire.Syntax
 import com.squareup.wire.WireLogger
@@ -30,9 +26,9 @@ import com.squareup.wire.schema.internal.parser.EnumConstantElement
 import com.squareup.wire.schema.internal.parser.EnumElement
 import com.squareup.wire.schema.internal.parser.ExtendElement
 import com.squareup.wire.schema.internal.parser.FieldElement
+import com.squareup.wire.schema.internal.parser.GroupElement
 import com.squareup.wire.schema.internal.parser.MessageElement
 import com.squareup.wire.schema.internal.parser.OneOfElement
-import com.squareup.wire.schema.internal.parser.OptionElement
 import com.squareup.wire.schema.internal.parser.ProtoFileElement
 import com.squareup.wire.schema.internal.parser.RpcElement
 import com.squareup.wire.schema.internal.parser.ServiceElement
@@ -259,27 +255,47 @@ private fun parseMessage(
 ): MessageElement {
   val info = baseSourceInfo.info()
   val nestedTypes = mutableListOf<TypeElement>()
+  val groupFields = mutableMapOf<String, FieldDescriptorProto>()
+  val groupTypes = mutableListOf<GroupElement>()
 
+  for (field in message.fieldList) {
+    if (field.type == FieldDescriptorProto.Type.TYPE_GROUP) {
+      groupFields.put(field.typeName, field)
+    }
+  }
   val mapTypes = mutableMapOf<String, String>()
   for ((sourceInfo, nestedType) in message.nestedTypeList.withSourceInfo(
     baseSourceInfo,
     DescriptorProto.NESTED_TYPE_FIELD_NUMBER
   )) {
+    val nestedTypeFullyQualifiedName = "$packagePrefix.${message.name}.${nestedType.name}"
     if (nestedType.options.mapEntry) {
-      val nestedTypeFullyQualifiedName = "$packagePrefix.${message.name}.${nestedType.name}"
       val keyTypeName = parseType(nestedType.fieldList[0])
       val valueTypeName = parseType(nestedType.fieldList[1])
       mapTypes[nestedTypeFullyQualifiedName] = "map<${keyTypeName}, ${valueTypeName}>"
       continue
     }
-    nestedTypes.add(
-      parseMessage(
-        sourceInfo,
-        "$packagePrefix.${message.name}",
-        nestedType,
-        syntax
-      )
+    val messageElement = parseMessage(
+      sourceInfo,
+      "$packagePrefix.${message.name}",
+      nestedType,
+      syntax
     )
+    if (groupFields.containsKey(nestedTypeFullyQualifiedName)) {
+      val field = groupFields.get(nestedTypeFullyQualifiedName)!!
+      groupTypes.add(
+        GroupElement(
+          label = parseLabel(field, syntax),
+          location = messageElement.location,
+          name = messageElement.name,
+          tag = field.number,
+          documentation = messageElement.documentation,
+          fields = messageElement.fields
+        )
+      )
+    } else {
+      nestedTypes.add(messageElement)
+    }
   }
 
   for ((sourceInfo, nestedType) in message.enumTypeList.withSourceInfo(
@@ -345,7 +361,7 @@ private fun parseOneOfs(
   for (oneOfIndex in oneOfMap.keys) {
     val fieldList = oneOfMap[oneOfIndex]!!
     if (fieldList.isEmpty()) {
-      // This can happen for synthetic oneofs, generated for proto3 optional fields.
+      // Empty is because of synthetic oneof that is a proto3 optional.
       // Just skip it.
       continue
     }
@@ -373,6 +389,7 @@ private fun indexFieldsByOneOf(
 ): Map<Int, List<FieldElement>> {
   val oneOfMap = mutableMapOf<Int, MutableList<FieldElement>>()
   for ((descriptor, fieldElement) in fields) {
+    // Excluding synthetic oneofs for proto3 optionals.
     if (descriptor.hasOneofIndex() && !descriptor.proto3Optional) {
       val list = oneOfMap.getOrPut(descriptor.oneofIndex) { mutableListOf() }
       list.add(fieldElement)
@@ -386,8 +403,7 @@ private fun indexFieldsByExtendee(
   pathTag: Int,
   extensions: List<Pair<FieldDescriptorProto, FieldElement>>
 ): List<ExtendElement> {
-  val info = baseSourceInfo.clone()
-  info.push(pathTag)
+  val info = baseSourceInfo.push(pathTag)
 
   val extendeeMap = mutableMapOf<String, MutableList<FieldElement>>()
   for ((descriptor, fieldElement) in extensions) {
@@ -418,6 +434,10 @@ private fun parseFields(
   for ((sourceInfo, field) in fieldList.withSourceInfo(baseSourceInfo, tag)) {
     var label = parseLabel(field, syntax)
     var type = parseType(field)
+    if (type.isEmpty()) {
+      // This is a group type. Continue on.
+      continue
+    }
     if (mapTypes.keys.contains(type)) {
       type = mapTypes[type]!!
       label = null
@@ -462,7 +482,6 @@ private fun parseType(field: FieldDescriptorProto): String {
     FieldDescriptorProto.Type.TYPE_MESSAGE -> {
       field.typeName
     }
-    // TODO: Group types are unsupported.
     FieldDescriptorProto.Type.TYPE_GROUP -> ""
     else -> throw RuntimeException("else case found for ${field.type}")
   }
@@ -480,90 +499,4 @@ private fun parseLabel(field: FieldDescriptorProto, syntax: Syntax): Field.Label
       }
     else -> null
   }
-}
-
-private fun <T : ExtendableMessage<T>> parseOptions(options: T, descs: Plugin.DescriptorSource): List<OptionElement> {
-  val optDesc = options.descriptorForType
-  val overrideDesc = descs.findMessageTypeByName(optDesc.fullName)
-  if (overrideDesc != null) {
-    val optsDm = DynamicMessage.newBuilder(overrideDesc)
-      .mergeFrom(options)
-      .build()
-    return createOptionElements(optsDm)
-  }
-  return createOptionElements(options)
-}
-
-private fun createOptionElements(options: AbstractMessage): List<OptionElement> {
-  val elements = mutableListOf<OptionElement>()
-  for (entry in options.allFields.entries) {
-    val fld = entry.key
-    val name = if (fld.isExtension) fld.fullName else fld.name
-    val (value, kind) = valueOf(entry.value)
-    elements.add(OptionElement(name, kind, value, fld.isExtension))
-  }
-  return elements
-}
-
-private fun valueOf(value: Any): OptionValueAndKind {
-  return when (value) {
-    is Number -> OptionValueAndKind(value.toString(), OptionElement.Kind.NUMBER)
-    is Boolean -> OptionValueAndKind(value.toString(), OptionElement.Kind.BOOLEAN)
-    is String -> OptionValueAndKind(value, OptionElement.Kind.STRING)
-    is ByteArray -> OptionValueAndKind(String(toCharArray(value)), OptionElement.Kind.STRING)
-    is EnumValueDescriptor -> OptionValueAndKind(value.name, OptionElement.Kind.ENUM)
-    is List<*> -> OptionValueAndKind(valueOfList(value), OptionElement.Kind.LIST)
-    is AbstractMessage -> OptionValueAndKind(valueOfMessage(value), OptionElement.Kind.MAP)
-    else -> throw IllegalStateException("Unexpected field value type: ${value::class.qualifiedName}")
-  }
-}
-
-private fun toCharArray(bytes: ByteArray): CharArray {
-  val chars = CharArray(bytes.size)
-  bytes.forEachIndexed { index, element -> chars[index] = element.toInt().toChar() }
-  return chars
-}
-
-private fun simpleValue(optionValueAndKind: OptionValueAndKind): Any {
-  return if (optionValueAndKind.kind == OptionElement.Kind.BOOLEAN ||
-    optionValueAndKind.kind == OptionElement.Kind.ENUM ||
-    optionValueAndKind.kind == OptionElement.Kind.NUMBER
-  ) {
-    OptionElement.OptionPrimitive(optionValueAndKind.kind, optionValueAndKind.value)
-  } else {
-    optionValueAndKind.value
-  }
-}
-
-private fun valueOfList(list: List<*>): List<Any> {
-  val ret = mutableListOf<Any>()
-  for (element in list) {
-    if (element == null) {
-      throw NullPointerException("list value should not contain null")
-    }
-    ret.add(simpleValue(valueOf(element)))
-  }
-  return ret
-}
-
-private fun valueOfMessage(abstractMessage: AbstractMessage): Map<String, Any> {
-  val values = mutableMapOf<String, Any>()
-  for (entry in abstractMessage.allFields.entries) {
-    val fieldDescriptor = entry.key
-    val name = if (fieldDescriptor.isExtension) "[${fieldDescriptor.fullName}]" else fieldDescriptor.name
-    values[name] = simpleValue(valueOf(entry.value))
-  }
-  return values
-}
-
-private fun <T> List<T>.withSourceInfo(sourceInfo: SourceInfo, value: Int): List<Pair<SourceInfo, T>> {
-  val baseSource = sourceInfo.clone()
-  val result = mutableListOf<Pair<SourceInfo, T>>()
-  baseSource.push(value)
-  for ((index, elem) in withIndex()) {
-    val newSource = baseSource.clone()
-    newSource.push(index)
-    result.add(newSource to elem)
-  }
-  return result
 }
