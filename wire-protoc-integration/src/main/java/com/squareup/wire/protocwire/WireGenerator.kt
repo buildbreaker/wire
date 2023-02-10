@@ -15,6 +15,7 @@ import com.google.protobuf.GeneratedMessageV3.ExtendableMessage
 import com.google.protobuf.compiler.PluginProtos
 import com.squareup.wire.Syntax
 import com.squareup.wire.WireLogger
+import com.squareup.wire.protocwire.StubbedRequestDebugging.Companion.debug
 import com.squareup.wire.schema.CoreLoader
 import com.squareup.wire.schema.ErrorCollector
 import com.squareup.wire.schema.Field
@@ -40,7 +41,12 @@ import com.squareup.wire.schema.internal.parser.ServiceElement
 import com.squareup.wire.schema.internal.parser.TypeElement
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
+import okio.Buffer
+import okio.ForwardingFileSystem
 import okio.Path
+import okio.Path.Companion.toPath
+import okio.Sink
+import okio.Timeout
 
 class WireGenerator(
   private val schemaHandler: SchemaHandler
@@ -80,6 +86,7 @@ class WireGenerator(
     descriptorSource: Plugin.DescriptorSource,
     response: Plugin.Response
   ) {
+    debug(request)
     val loader = CoreLoader
     val errorCollector = ErrorCollector()
     val linker = Linker(loader, errorCollector, permitPackageCycles = true, loadExhaustively = true)
@@ -95,7 +102,8 @@ class WireGenerator(
     try {
       val schema = linker.link(protoFiles)
       val context = SchemaHandler.Context(
-        fileWriter = ProtoFileWriter(response),
+        fileSystem = FileSystem(response),
+        outDirectory = "".toPath(),
         errorCollector = errorCollector,
         sourcePathPaths = sourcePaths,
         profileLoader = nullProfileLoader,
@@ -109,6 +117,35 @@ class WireGenerator(
       val formatter = DateTimeFormatter.ofPattern("HH:mm:ss")
       val formatted = current.format(formatter)
       response.addFile("$formatted-error.log", e.stackTraceToString())
+    }
+  }
+}
+
+class FileSystem(private val response: Plugin.Response): ForwardingFileSystem(SYSTEM) {
+  override fun sink(file: Path, mustCreate: Boolean): Sink {
+    return object: Sink {
+      private val buffer = Buffer()
+      private var isFlushed = false
+      override fun close() {
+        flush()
+        buffer.close()
+      }
+
+      override fun flush() {
+        if (isFlushed) {
+          return
+        }
+        isFlushed = true
+        response.addFile(file.toString(), buffer.readUtf8())
+      }
+
+      override fun timeout(): Timeout {
+        return Timeout()
+      }
+
+      override fun write(source: Buffer, byteCount: Long) {
+        source.read(buffer, byteCount)
+      }
     }
   }
 }

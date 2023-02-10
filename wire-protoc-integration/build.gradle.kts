@@ -43,7 +43,7 @@ tasks {
     from(contents)
   }
   build {
-    dependsOn(kotlinGeneratorBinary, javaGeneratorBinary)
+    dependsOn(kotlinGeneratorBinary, javaGeneratorBinary, stub)
   }
 }
 
@@ -56,5 +56,7 @@ dependencies {
   implementation(libs.protobuf.java)
   implementation(projects.wireSchema)
   implementation(projects.wireCompiler)
+  implementation(projects.wireKotlinGenerator)
+  implementation(projects.wireJavaGenerator)
   implementation(projects.wireGradlePlugin)
 }
