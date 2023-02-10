@@ -6,7 +6,7 @@ import okio.Path
 import okio.Sink
 import okio.Timeout
 
-class ProtocFileSystem(private val response: Plugin.Response): ForwardingFileSystem(SYSTEM) {
+internal class ProtocFileSystem(private val response: Plugin.Response): ForwardingFileSystem(SYSTEM) {
   /**
    * Returns a single sink per file from protoc.
    *
