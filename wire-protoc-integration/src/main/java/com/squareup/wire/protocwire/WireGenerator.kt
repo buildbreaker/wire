@@ -15,7 +15,6 @@ import com.google.protobuf.GeneratedMessageV3.ExtendableMessage
 import com.google.protobuf.compiler.PluginProtos
 import com.squareup.wire.Syntax
 import com.squareup.wire.WireLogger
-import com.squareup.wire.protocwire.StubbedRequestDebugging.Companion.debug
 import com.squareup.wire.schema.CoreLoader
 import com.squareup.wire.schema.ErrorCollector
 import com.squareup.wire.schema.Field
@@ -86,7 +85,6 @@ class WireGenerator(
     descriptorSource: Plugin.DescriptorSource,
     response: Plugin.Response
   ) {
-    debug(request)
     val loader = CoreLoader
     val errorCollector = ErrorCollector()
     val linker = Linker(loader, errorCollector, permitPackageCycles = true, loadExhaustively = true)
